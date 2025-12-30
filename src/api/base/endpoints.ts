@@ -171,17 +171,19 @@ export const API_ENDPOINTS = {
 
   // Notifications
   NOTIFICATIONS: {
-    BASE: '/notifications',
-    LIST: '/notifications',
-    GET: (id: string) => `/notifications/${id}`,
-    CREATE: '/notifications',
-    UPDATE: (id: string) => `/notifications/${id}`,
-    DELETE: (id: string) => `/notifications/${id}`,
-    MARK_READ: (id: string) => `/notifications/${id}/read`,
-    MARK_ALL_READ: '/notifications/read-all',
-    UNREAD: '/notifications/unread',
-    SEND: '/notifications/send',
-    SCHEDULE: '/notifications/schedule',
+    BASE: '/noti',
+    LIST: '/noti/getAll',
+    GET: (id: string) => `/noti/${id}`,
+    CREATE: '/noti/create',
+    UPDATE: (id: string) => `/noti/${id}`,
+    DELETE: (id: string) => `/noti/${id}`,
+    STATS_STATUS: '/noti/stats/status',
+    STATS: '/noti/stats',
+    MARK_READ: (id: string) => `/noti/${id}/read`,
+    MARK_ALL_READ: '/noti/read-all',
+    UNREAD: '/noti/unread',
+    SEND: '/noti/send',
+    SCHEDULE: '/noti/schedule',
   },
 
   // News & Announcements

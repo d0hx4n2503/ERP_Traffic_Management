@@ -1,16 +1,18 @@
-import { motion } from 'motion/react';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bell, AlertTriangle, Info, CheckCircle, X } from 'lucide-react';
-import { notifications, Notification } from '@/lib/mockData';
+import { Notification } from '@/types/notification.types';
+import notificationService from '@/services/notificationService';
 
 const notificationIcons = {
   info: { icon: Info, color: 'text-blue-500 bg-blue-100' },
   warning: { icon: AlertTriangle, color: 'text-yellow-500 bg-yellow-100' },
-  success: { icon: CheckCircle, color: 'text-green-500 bg-green-100' },
-  error: { icon: X, color: 'text-red-500 bg-red-100' }
+  important: { icon: CheckCircle, color: 'text-green-500 bg-green-100' },
+  system: { icon: X, color: 'text-red-500 bg-red-100' }
 };
 
 interface NotificationsPanelProps {
@@ -19,7 +21,20 @@ interface NotificationsPanelProps {
 }
 
 export default function NotificationsPanel({ open, onOpenChange }: NotificationsPanelProps) {
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (open) {
+      const fetchNotifications = async () => {
+        const res = await notificationService.getMyNotifications(1, 50);
+        setNotifications(res.notifications);
+        const count = await notificationService.getUnreadCount();
+        setUnreadCount(count);
+      };
+      fetchNotifications();
+    }
+  }, [open]);
 
   const getTimeAgo = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -57,8 +72,16 @@ export default function NotificationsPanel({ open, onOpenChange }: Notifications
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`p-4 rounded-lg border ${notification.read ? 'bg-background' : 'bg-muted/50'
+                  className={`p-4 rounded-lg border ${notification.status === 'unread' ? 'bg-muted/50'
+                    : 'bg-background'
                     } hover:shadow-md transition-all cursor-pointer`}
+                  onClick={async () => {
+                    if (notification.status === 'unread') {
+                      await notificationService.markAsRead(notification.id);
+                      setNotifications(prev => prev.map(p => p.id === notification.id ? { ...p, status: 'read' } : p));
+                      setUnreadCount(unreadCount - 1);
+                    }
+                  }}
                 >
                   <div className="flex gap-3">
                     <div className={`p-2 rounded-full ${config.color} h-fit`}>
@@ -67,15 +90,15 @@ export default function NotificationsPanel({ open, onOpenChange }: Notifications
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <h4 className="font-medium">{notification.title}</h4>
-                        {!notification.read && (
+                        {notification.status === 'unread' && (
                           <div className="h-2 w-2 bg-blue-500 rounded-full mt-1" />
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {notification.message}
+                        {notification.content}
                       </p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {getTimeAgo(notification.date)}
+                        {getTimeAgo(notification.created_at)}
                       </p>
                     </div>
                   </div>
@@ -86,7 +109,11 @@ export default function NotificationsPanel({ open, onOpenChange }: Notifications
         </ScrollArea>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-background">
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full" onClick={async () => {
+            await notificationService.markAllAsRead();
+            setNotifications(prev => prev.map(p => ({ ...p, status: 'read' })));
+            setUnreadCount(0);
+          }}>
             Đánh dấu tất cả đã đọc
           </Button>
         </div>

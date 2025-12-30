@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,7 @@ import {
   Info,
   XCircle,
 } from "lucide-react";
-import ModernDataTable, { ColumnDef, FilterConfig } from "@/components/ModernDataTable";
+import ModernDataTable, { ColumnDef, FilterConfig } from "@/components/LicensesUI/ModernDataTable";
 import {
   Dialog,
   DialogContent,
@@ -40,145 +40,79 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface NotificationRecord {
-  id: string;
-  title: string;
-  message: string;
-  type: "info" | "warning" | "success" | "error";
-  targetAudience:
-  | "all"
-  | "license_holders"
-  | "vehicle_owners"
-  | "violators"
-  | "students";
-  status: "draft" | "sent" | "scheduled";
-  createdDate: string;
-  sentDate?: string;
-  recipientCount: number;
-  readCount: number;
-  createdBy: string;
-}
-
-// Mock data
-const mockNotifications: NotificationRecord[] = [
-  {
-    id: "NTF00001",
-    title: "Thông báo gia hạn GPLX",
-    message:
-      "Kính gửi quý khách, GPLX của bạn sắp hết hạn. Vui lòng đến cơ quan CSGT để làm thủ tục gia hạn.",
-    type: "warning",
-    targetAudience: "license_holders",
-    status: "sent",
-    createdDate: "2024-10-20",
-    sentDate: "2024-10-20",
-    recipientCount: 245,
-    readCount: 189,
-    createdBy: "Admin",
-  },
-  {
-    id: "NTF00002",
-    title: "Nhắc nhở đăng kiểm phương tiện",
-    message:
-      "Phương tiện của bạn đã đến hạn đăng kiểm. Vui lòng liên hệ trung tâm đăng kiểm gần nhất.",
-    type: "warning",
-    targetAudience: "vehicle_owners",
-    status: "sent",
-    createdDate: "2024-10-18",
-    sentDate: "2024-10-18",
-    recipientCount: 156,
-    readCount: 142,
-    createdBy: "Admin",
-  },
-  {
-    id: "NTF00003",
-    title: "Cập nhật chính sách mới",
-    message:
-      "Bộ GTVT vừa ban hành quy định mới về quản lý GPLX. Vui lòng xem chi tiết tại website.",
-    type: "info",
-    targetAudience: "all",
-    status: "sent",
-    createdDate: "2024-10-15",
-    sentDate: "2024-10-15",
-    recipientCount: 1250,
-    readCount: 980,
-    createdBy: "Admin",
-  },
-  {
-    id: "NTF00004",
-    title: "Thông báo kết quả sát hạch",
-    message:
-      "Kết quả kỳ sát hạch ngày 25/10/2024 đã được công bố. Vui lòng kiểm tra kết quả của bạn.",
-    type: "success",
-    targetAudience: "students",
-    status: "draft",
-    createdDate: "2024-10-25",
-    recipientCount: 0,
-    readCount: 0,
-    createdBy: "Admin",
-  },
-  {
-    id: "NTF00005",
-    title: "Cảnh báo vi phạm nghiêm trọng",
-    message:
-      "Bạn có vi phạm giao thông chưa được xử lý. Vui lòng đến cơ quan CSGT để giải quyết.",
-    type: "error",
-    targetAudience: "violators",
-    status: "sent",
-    createdDate: "2024-10-22",
-    sentDate: "2024-10-22",
-    recipientCount: 78,
-    readCount: 45,
-    createdBy: "Admin",
-  },
-];
-
-const typeConfig = {
-  info: { label: "Thông tin", color: "bg-blue-500", icon: Info },
-  warning: { label: "Cảnh báo", color: "bg-yellow-500", icon: AlertTriangle },
-  success: { label: "Thành công", color: "bg-green-500", icon: CheckCircle },
-  error: { label: "Lỗi", color: "bg-red-500", icon: XCircle },
-};
-
-const statusConfig = {
-  draft: { label: "Nháp", color: "bg-gray-500" },
-  sent: { label: "Đã gửi", color: "bg-green-500" },
-  scheduled: { label: "Đã lên lịch", color: "bg-blue-500" },
-};
-
-const audienceConfig = {
-  all: "Tất cả người dùng",
-  license_holders: "Chủ GPLX",
-  vehicle_owners: "Chủ phương tiện",
-  violators: "Người vi phạm",
-  students: "Thí sinh",
-};
+import { Notification } from "@/types/notification.types";
+import notificationService from "@/services/notificationService";
 
 export default function NotificationsManagement() {
-  const [notifications, setNotifications] = useState(mockNotifications);
-  const [selectedNotification, setSelectedNotification] =
-    useState<NotificationRecord | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "detail" | "add" | "edit">(
-    "list"
-  );
-  const [formData, setFormData] = useState<Partial<NotificationRecord>>({
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [viewMode, setViewMode] = useState<"list" | "detail" | "add" | "edit">("list");
+  const [formData, setFormData] = useState<Partial<Notification>>({
     type: "info",
-    targetAudience: "all",
-    status: "draft",
+    target: "all",
+    status: "unread",
   });
 
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      const res = await notificationService.getAllNotifications(currentPage, itemsPerPage);
+      setNotifications(res.notifications);
+      setTotalCount(res.total_count);
+      setTotalPages(res.total_pages);
+    };
+    fetchNotifications();
+  }, []);
+
   const handleCreate = () => {
-    setFormData({ type: "info", targetAudience: "all", status: "draft" });
+    setFormData({ type: "info", target: "all", status: "unread" });
     setViewMode("add");
   };
 
-  const columns: ColumnDef<NotificationRecord>[] = [
+  const handleSave = async (send: boolean) => {
+    // const data = { ...formData, active: send };
+    // let not: Notification;
+    // if (viewMode === "add") {
+    //   not = await notificationService.createNotification(data);
+    // } else {
+    //   not = await notificationService.updateNotification(selectedNotification!.id, data);
+    // }
+    // setNotifications((prev) =>
+    //   viewMode === "add"
+    //     ? [...prev, not]
+    //     : prev.map((p) => (p.id === not.id ? not : p))
+    // );
+    // if (send) {
+    //   await notificationService.sendNow(not.id);
+    // }
+    // setViewMode("list");
+  };
+
+  const columns: ColumnDef<Notification>[] = [
     {
-      key: "id",
+      key: 'stt',
+      header: 'STT',
+      width: '60px',
+      render: (_, index) => <span className="text-sm">{index + 1}</span>
+    },
+    {
+      key: "code",
       header: "Mã",
-      width: "90px",
+      width: "150px",
       sortable: true,
-      render: (item) => <span className="font-mono text-xs">{item.id}</span>,
+      render: (item) => (
+        <div className="text-left">
+          <div
+            className="font-medium truncate max-w-[200px]"
+            title={item.code}
+          >
+            {item.code}
+          </div>
+        </div>
+      ),
     },
     {
       key: "title",
@@ -197,42 +131,55 @@ export default function NotificationsManagement() {
       ),
     },
     {
-      key: "message",
+      key: "content",
       header: "Nội dung",
       width: "280px",
       render: (item) => (
         <div
           className="text-xs text-muted-foreground truncate max-w-[280px]"
-          title={item.message}
+          title={item.content}
         >
-          {item.message}
+          {item.content}
         </div>
       ),
     },
     {
       key: "type",
       header: "Loại",
-      width: "150px",
-      sortable: true,
-      render: (item) => {
-        const config = typeConfig[item.type];
-        const Icon = config.icon;
-        return (
-          <Badge
-            className={`${config.color} text-white flex items-center gap-1 w-fit`}
-          >
-            <Icon className="h-3 w-3" />
-            {config.label}
-          </Badge>
-        );
-      },
+      width: "140px",
+      render: (item) => (
+        <div
+          className="text-xs text-muted-foreground truncate max-w-[280px]"
+          title={item.type}
+        >
+          {item.type}
+        </div>
+      ),
     },
+    // {
+    //   key: "type",
+    //   header: "Loại",
+    //   width: "150px",
+    //   sortable: true,
+    //   render: (item) => {
+    //     const config = typeConfig[item.type];
+    //     const Icon = config.icon;
+    //     return (
+    //       <Badge
+    //         className={`${config.color} text-white flex items-center gap-1 w-fit`}
+    //       >
+    //         <Icon className="h-3 w-3" />
+    //         {config.label}
+    //       </Badge>
+    //     );
+    //   },
+    // },
     {
-      key: "targetAudience",
+      key: "target",
       header: "Đối tượng",
       width: "150px",
       render: (item) => (
-        <span className="text-xs">{audienceConfig[item.targetAudience]}</span>
+        <span className="text-xs">{audienceConfig[item.target]}</span>
       ),
     },
     {
@@ -249,38 +196,13 @@ export default function NotificationsManagement() {
       ),
     },
     {
-      key: "recipientCount",
-      header: "Gửi",
-      width: "100px",
-      sortable: true,
-      render: (item) => (
-        <span className="text-center block text-sm">{item.recipientCount}</span>
-      ),
-    },
-    {
-      key: "readCount",
-      header: "Đọc",
-      width: "100px",
-      sortable: true,
-      render: (item) => (
-        <div className="text-center">
-          <div className="text-sm">{item.readCount}</div>
-          {item.recipientCount > 0 && (
-            <div className="text-xs text-muted-foreground">
-              ({Math.round((item.readCount / item.recipientCount) * 100)}%)
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "createdDate",
+      key: "created_at",
       header: "Ngày tạo",
       width: "150px",
       sortable: true,
       render: (item) => (
         <span className="text-xs">
-          {new Date(item.createdDate).toLocaleDateString("vi-VN")}
+          {new Date(item.created_at).toLocaleDateString("vi-VN")}
         </span>
       ),
     },
@@ -340,6 +262,10 @@ export default function NotificationsManagement() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={async () => {
+                    await notificationService.deleteNotification(item.id);
+                    setNotifications(notifications.filter((n) => n.id !== item.id));
+                  }}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -354,6 +280,25 @@ export default function NotificationsManagement() {
     },
   ];
 
+  const typeConfig = {
+    info: { label: "Thông tin", color: "bg-blue-500", icon: Info },
+    warning: { label: "Cảnh báo", color: "bg-yellow-500", icon: AlertTriangle },
+    important: { label: "Quan trọng", color: "bg-orange-500", icon: AlertTriangle },
+    system: { label: "Hệ thống", color: "bg-purple-500", icon: CheckCircle },
+  };
+
+  const statusConfig = {
+    unread: { label: "Chưa đọc", color: "bg-gray-500" },
+    read: { label: "Đã đọc", color: "bg-green-500" },
+    success: { label: "Thành công", color: "bg-blue-500" },
+  };
+
+  const audienceConfig = {
+    all: "Tất cả",
+    personal: "Cá nhân",
+    group: "Nhóm",
+  };
+
   const filters: FilterConfig[] = [
     {
       key: "type",
@@ -362,8 +307,8 @@ export default function NotificationsManagement() {
         { value: "all", label: "Tất cả" },
         { value: "info", label: "Thông tin" },
         { value: "warning", label: "Cảnh báo" },
-        { value: "success", label: "Thành công" },
-        { value: "error", label: "Lỗi" },
+        { value: "important", label: "Quan trọng" },
+        { value: "system", label: "Hệ thống" },
       ],
     },
     {
@@ -371,20 +316,19 @@ export default function NotificationsManagement() {
       label: "Trạng thái",
       options: [
         { value: "all", label: "Tất cả" },
-        { value: "draft", label: "Nháp" },
-        { value: "sent", label: "Đã gửi" },
-        { value: "scheduled", label: "Đã lên lịch" },
+        { value: "unread", label: "Chưa đọc" },
+        { value: "read", label: "Đã đọc" },
+        { value: "success", label: "Thành công" },
       ],
     },
     {
-      key: "targetAudience",
+      key: "target",
       label: "Đối tượng",
       options: [
         { value: "all", label: "Tất cả" },
-        { value: "license_holders", label: "Chủ GPLX" },
-        { value: "vehicle_owners", label: "Chủ phương tiện" },
-        { value: "violators", label: "Người vi phạm" },
-        { value: "students", label: "Thí sinh" },
+        { value: "all", label: "Tất cả" },
+        { value: "personal", label: "Cá nhân" },
+        { value: "group", label: "Nhóm" },
       ],
     },
   ];
@@ -432,7 +376,7 @@ export default function NotificationsManagement() {
               </div>
               <div>
                 <Label className="text-muted-foreground">Đối tượng nhận</Label>
-                <p>{audienceConfig[selectedNotification.targetAudience]}</p>
+                <p>{audienceConfig[selectedNotification.target]}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Trạng thái</Label>
@@ -447,42 +391,44 @@ export default function NotificationsManagement() {
               <div>
                 <Label className="text-muted-foreground">Ngày tạo</Label>
                 <p>
-                  {new Date(selectedNotification.createdDate).toLocaleString(
+                  {new Date(selectedNotification.created_at).toLocaleString(
                     "vi-VN"
                   )}
                 </p>
               </div>
-              {selectedNotification.sentDate && (
-                <div>
-                  <Label className="text-muted-foreground">Ngày gửi</Label>
-                  <p>
-                    {new Date(selectedNotification.sentDate).toLocaleString(
-                      "vi-VN"
-                    )}
-                  </p>
-                </div>
-              )}
               <div>
-                <Label className="text-muted-foreground">Số người nhận</Label>
-                <p>{selectedNotification.recipientCount}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Đã đọc</Label>
+                <Label className="text-muted-foreground">Ngày cập nhật</Label>
                 <p>
-                  {selectedNotification.readCount}
-                  {selectedNotification.recipientCount > 0 &&
-                    ` (${Math.round((selectedNotification.readCount / selectedNotification.recipientCount) * 100)}%)`}
+                  {new Date(selectedNotification.updated_at).toLocaleString(
+                    "vi-VN"
+                  )}
                 </p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Người tạo</Label>
-                <p>{selectedNotification.createdBy}</p>
+                <p>{selectedNotification.creator_id}</p>
               </div>
+              <div>
+                <Label className="text-muted-foreground">Hoạt động</Label>
+                <div className="mt-1">
+                  <Badge
+                    className={selectedNotification.active ? "bg-green-500" : "bg-gray-500"}
+                  >
+                    {selectedNotification.active ? "Hoạt động" : "Không hoạt động"}
+                  </Badge>
+                </div>
+              </div>
+              {selectedNotification.target === "personal" && (
+                <div>
+                  <Label className="text-muted-foreground">Người nhận</Label>
+                  <p>{selectedNotification.target_user}</p>
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-muted-foreground">Nội dung</Label>
               <p className="mt-2 p-4 bg-muted rounded-lg">
-                {selectedNotification.message}
+                {selectedNotification.content}
               </p>
             </div>
           </CardContent>
@@ -526,9 +472,9 @@ export default function NotificationsManagement() {
               <div className="col-span-2">
                 <Label>Nội dung *</Label>
                 <Textarea
-                  value={formData.message || ""}
+                  value={formData.content || ""}
                   onChange={(e) =>
-                    setFormData({ ...formData, message: e.target.value })
+                    setFormData({ ...formData, content: e.target.value })
                   }
                   placeholder="Nhập nội dung thông báo"
                   rows={5}
@@ -548,44 +494,52 @@ export default function NotificationsManagement() {
                   <SelectContent>
                     <SelectItem value="info">Thông tin</SelectItem>
                     <SelectItem value="warning">Cảnh báo</SelectItem>
-                    <SelectItem value="success">Thành công</SelectItem>
-                    <SelectItem value="error">Lỗi</SelectItem>
+                    <SelectItem value="important">Quan trọng</SelectItem>
+                    <SelectItem value="system">Hệ thống</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label>Đối tượng nhận</Label>
                 <Select
-                  value={formData.targetAudience}
+                  value={formData.target}
                   onValueChange={(value: any) =>
-                    setFormData({ ...formData, targetAudience: value })
+                    setFormData({ ...formData, target: value })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất cả người dùng</SelectItem>
-                    <SelectItem value="license_holders">Chủ GPLX</SelectItem>
-                    <SelectItem value="vehicle_owners">
-                      Chủ phương tiện
-                    </SelectItem>
-                    <SelectItem value="violators">Người vi phạm</SelectItem>
-                    <SelectItem value="students">Thí sinh</SelectItem>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="personal">Cá nhân</SelectItem>
+                    <SelectItem value="group">Nhóm</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {formData.target === "personal" && (
+                <div className="col-span-2">
+                  <Label>CCCD người nhận</Label>
+                  <Input
+                    value={formData.target_user || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, target_user: e.target.value })
+                    }
+                    placeholder="Nhập CCCD"
+                  />
+                </div>
+              )}
             </div>
             <div className="flex gap-2 justify-end pt-4">
               <Button variant="outline" onClick={() => setViewMode("list")}>
                 Hủy
               </Button>
-              <Button onClick={() => setViewMode("list")}>
+              <Button onClick={() => handleSave(false)}>
                 <Mail className="h-4 w-4 mr-2" />
                 Lưu nháp
               </Button>
               <Button
-                onClick={() => setViewMode("list")}
+                onClick={() => handleSave(true)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <Send className="h-4 w-4 mr-2" />
@@ -605,7 +559,7 @@ export default function NotificationsManagement() {
         columns={columns}
         title="Danh sách thông báo"
         searchPlaceholder="Tìm kiếm theo tiêu đề, nội dung..."
-        searchKeys={["title", "message", "id"]}
+        searchKeys={["title", "content", "id"]}
         filters={filters}
         getItemKey={(item) => item.id}
         actions={
@@ -617,7 +571,37 @@ export default function NotificationsManagement() {
             Tạo mới
           </Button>
         }
+        currentPage={currentPage}
+        itemsPerPage={itemsPerPage}
+        totalItems={totalCount}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={setItemsPerPage}
       />
+
+      {/* Action Legend */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200"
+      >
+        <p className="text-sm mb-3">Chú thích thao tác:</p>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2 text-blue-600">
+            <Eye className="h-4 w-4" />
+            <span>Xem chi tiết</span>
+          </div>
+          <div className="flex items-center gap-2 text-blue-600">
+            <Edit className="h-4 w-4" />
+            <span>Chỉnh sửa</span>
+          </div>
+          <div className="flex items-center gap-2 text-red-600">
+            <Trash2 className="h-4 w-4" />
+            <span>Xóa</span>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
