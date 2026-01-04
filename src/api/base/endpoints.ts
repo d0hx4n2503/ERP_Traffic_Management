@@ -20,6 +20,16 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: '/auth/change-password',
   },
 
+  GOV_AGENCY: {
+    BASE: '/agency',
+    LIST: '/agency/getAll',
+    GET: (id: string) => `/agency/${id}`,
+    CREATE: '/agency',
+    UPDATE: (id: string) => `/agency/${id}`,
+    DELETE: (id: string) => `/agency/${id}`,
+    SEARCH: '/agency/search',
+  },
+
   // Driver License Management
   LICENSES: {
     BASE: '/licenses',
