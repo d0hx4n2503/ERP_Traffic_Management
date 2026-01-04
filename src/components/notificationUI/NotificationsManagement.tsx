@@ -146,34 +146,21 @@ export default function NotificationsManagement() {
     {
       key: "type",
       header: "Loại",
-      width: "140px",
-      render: (item) => (
-        <div
-          className="text-xs text-muted-foreground truncate max-w-[280px]"
-          title={item.type}
-        >
-          {item.type}
-        </div>
-      ),
+      width: "150px",
+      sortable: true,
+      render: (item) => {
+        const config = typeConfig[item.type];
+        const Icon = config.icon;
+        return (
+          <Badge
+            className={`${config.color} text-white flex items-center gap-1 w-fit`}
+          >
+            <Icon className="h-3 w-3" />
+            {config.label}
+          </Badge>
+        );
+      },
     },
-    // {
-    //   key: "type",
-    //   header: "Loại",
-    //   width: "150px",
-    //   sortable: true,
-    //   render: (item) => {
-    //     const config = typeConfig[item.type];
-    //     const Icon = config.icon;
-    //     return (
-    //       <Badge
-    //         className={`${config.color} text-white flex items-center gap-1 w-fit`}
-    //       >
-    //         <Icon className="h-3 w-3" />
-    //         {config.label}
-    //       </Badge>
-    //     );
-    //   },
-    // },
     {
       key: "target",
       header: "Đối tượng",
