@@ -1,5 +1,3 @@
-// src/services/notificationService.ts
-
 import notificationApi from '@/api/modules/notification.api';
 import { PaginatedNotificationResponse } from '@/types/notification.types';
 
