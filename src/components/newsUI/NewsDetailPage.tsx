@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,24 +14,28 @@ import {
   Share2,
   Download,
   Printer,
-  TrendingUp,
   Clock
 } from 'lucide-react';
-import { News } from '@/lib/mockData';
+import { News } from '@/types/news.types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 import { toast } from 'sonner';
+import { newsService } from '@/services/newsService';
 
-const categoryConfig = {
-  'traffic-law': { label: 'Luật giao thông', color: 'bg-red-500' },
-  'announcement': { label: 'Thông báo', color: 'bg-blue-500' },
-  'guide': { label: 'Hướng dẫn', color: 'bg-green-500' },
-  'news': { label: 'Tin tức', color: 'bg-purple-500' }
+const categoryConfig: Record<string, { label: string; color: string }> = {
+  law: { label: "Luật giao thông", color: "bg-orange-500" },
+  announcement: { label: "Thông báo", color: "bg-blue-500" },
+  guide: { label: "Hướng dẫn", color: "bg-green-500" },
+  news: { label: "Tin tức", color: "bg-purple-500" },
+  info: { label: "Thông tin", color: "bg-cyan-500" },
+  warning: { label: "Cảnh báo", color: "bg-red-500" },
+  important: { label: "Quan trọng", color: "bg-red-600" },
+  system: { label: "Hệ thống", color: "bg-gray-600" },
 };
 
-const statusConfig = {
-  published: { label: 'Đã đăng', color: 'bg-green-500' },
-  draft: { label: 'Nháp', color: 'bg-gray-500' },
-  archived: { label: 'Lưu trữ', color: 'bg-yellow-500' }
+const statusConfig: Record<string, { label: string; color: string }> = {
+  published: { label: "Đã đăng", color: "bg-green-500" },
+  draft: { label: "Nháp", color: "bg-gray-500" },
+  archived: { label: "Lưu trữ", color: "bg-yellow-500" },
 };
 
 interface NewsDetailPageProps {
@@ -40,39 +44,44 @@ interface NewsDetailPageProps {
   onEdit: () => void;
 }
 
-export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageProps) {
+export default function NewsDetailPage({ news: initialNews, onBack, onEdit }: NewsDetailPageProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
+  const [news, setNews] = useState<News>(initialNews);
+
+  useEffect(() => {
+    const fetchLatest = async () => {
+      try {
+        const freshNews = await newsService.getNewsById(initialNews.id);
+        setNews(freshNews);
+      } catch (err) {
+        toast.error("Không thể tải chi tiết mới nhất");
+      }
+    };
+    fetchLatest();
+  }, [initialNews.id]);
 
   useEffect(() => {
     setBreadcrumbs([
       { label: 'Trang chính', onClick: onBack, isHome: true },
       { label: 'Tin tức', onClick: onBack },
-      { label: news.title.substring(0, 50) + '...' }
+      { label: news.title.substring(0, 50) + (news.title.length > 50 ? '...' : '') }
     ]);
 
-    return () => {
-      resetBreadcrumbs();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [news.id]);
+    return () => resetBreadcrumbs();
+  }, [news.title, onBack, setBreadcrumbs, resetBreadcrumbs]);
+
+  const readingTime = Math.ceil(news.content.split(' ').length / 200);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h2 className="text-3xl">Chi tiết tin tức</h2>
-            <p className="text-muted-foreground mt-1">
-              Thông tin chi tiết bài viết
-            </p>
+            <p className="text-muted-foreground mt-1">Thông tin chi tiết bài viết</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -96,53 +105,38 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
       </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="lg:col-span-2 space-y-6"
-        >
-          {/* Featured Image */}
-          <Card className="overflow-hidden">
-            <img
-              src={news.thumbnail}
-              alt={news.title}
-              className="w-full h-[400px] object-cover"
-            />
-          </Card>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="lg:col-span-2 space-y-6">
+          {news.image && (
+            <Card className="overflow-hidden">
+              <img
+                src={news.image}
+                alt={news.title}
+                className="w-full h-[400px] object-cover"
+              />
+            </Card>
+          )}
 
-          {/* Content */}
           <Card>
             <CardHeader>
               <div className="space-y-4">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={`${categoryConfig[news.category].color} text-white`}>
-                    {categoryConfig[news.category].label}
+                  <Badge className={`${categoryConfig[news.category]?.color || "bg-gray-500"} text-white`}>
+                    {categoryConfig[news.category]?.label || news.category}
                   </Badge>
-                  <Badge className={`${statusConfig[news.status].color} text-white`}>
-                    {statusConfig[news.status].label}
+                  <Badge className={`${statusConfig[news.status]?.color || "bg-gray-500"} text-white`}>
+                    {statusConfig[news.status]?.label || news.status}
                   </Badge>
-                  {news.featured && (
-                    <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
-                      <TrendingUp className="mr-1 h-3 w-3" />
-                      Nổi bật
-                    </Badge>
-                  )}
                 </div>
                 <CardTitle className="text-3xl leading-tight">{news.title}</CardTitle>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  {news.summary}
-                </p>
                 <Separator />
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4" />
-                    <span>{news.author}</span>
+                    <span>{news.author || "Không rõ"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
-                    <span>{new Date(news.publishDate).toLocaleDateString('vi-VN', {
+                    <span>{new Date(news.created_at).toLocaleDateString('vi-VN', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -150,21 +144,18 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
                   </div>
                   <div className="flex items-center gap-2">
                     <Eye className="h-4 w-4" />
-                    <span>{news.views.toLocaleString('vi-VN')} lượt xem</span>
+                    <span>{news.view.toLocaleString('vi-VN')} lượt xem</span>
                   </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div
-                className="prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: news.content }}
-              />
+              <div className="prose prose-lg max-w-none" dangerouslySetInnerHTML={{ __html: news.content }} />
             </CardContent>
           </Card>
 
           {/* Tags */}
-          {news.tags.length > 0 && (
+          {news.tag && news.tag.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -174,7 +165,7 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {news.tags.map((tag, index) => (
+                  {news.tag.map((tag: string, index: number) => (
                     <Badge key={index} variant="outline" className="text-sm">
                       {tag}
                     </Badge>
@@ -185,14 +176,7 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
           )}
         </motion.div>
 
-        {/* Sidebar */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
-          {/* Actions Card */}
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Thao tác</CardTitle>
@@ -218,48 +202,42 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
             </CardContent>
           </Card>
 
-          {/* Info Card */}
           <Card>
             <CardHeader>
               <CardTitle>Thông tin</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Mã bài viết</p>
-                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">
-                  {news.id}
-                </code>
+                <p className="text-sm text-muted-foreground mb-1">ID bài viết</p>
+                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{news.id}</code>
               </div>
               <Separator />
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Slug</p>
-                <code className="bg-muted px-2 py-1 rounded text-sm font-mono break-all">
-                  {news.slug}
-                </code>
+                <p className="text-sm text-muted-foreground mb-1">Mã bài viết</p>
+                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{news.code}</code>
               </div>
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Tác giả</p>
-                <p className="font-medium">{news.author}</p>
+                <p className="font-medium">{news.author || "Không rõ"}</p>
               </div>
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Danh mục</p>
-                <Badge className={`${categoryConfig[news.category].color} text-white`}>
-                  {categoryConfig[news.category].label}
+                <Badge className={`${categoryConfig[news.category]?.color || "bg-gray-500"} text-white`}>
+                  {categoryConfig[news.category]?.label || news.category}
                 </Badge>
               </div>
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Trạng thái</p>
-                <Badge className={`${statusConfig[news.status].color} text-white`}>
-                  {statusConfig[news.status].label}
+                <Badge className={`${statusConfig[news.status]?.color || "bg-gray-500"} text-white`}>
+                  {statusConfig[news.status]?.label || news.status}
                 </Badge>
               </div>
             </CardContent>
           </Card>
 
-          {/* Stats Card */}
           <Card>
             <CardHeader>
               <CardTitle>Thống kê</CardTitle>
@@ -267,12 +245,12 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
             <CardContent className="space-y-3">
               <div>
                 <p className="text-sm text-muted-foreground">Lượt xem</p>
-                <p className="text-2xl">{news.views.toLocaleString('vi-VN')}</p>
+                <p className="text-2xl">{news.view.toLocaleString('vi-VN')}</p>
               </div>
               <Separator />
               <div>
-                <p className="text-sm text-muted-foreground">Ngày xuất bản</p>
-                <p className="text-lg">{new Date(news.publishDate).toLocaleDateString('vi-VN')}</p>
+                <p className="text-sm text-muted-foreground">Ngày tạo</p>
+                <p className="text-lg">{new Date(news.created_at).toLocaleDateString('vi-VN')}</p>
               </div>
               <Separator />
               <div>
@@ -280,7 +258,7 @@ export default function NewsDetailPage({ news, onBack, onEdit }: NewsDetailPageP
                   <Clock className="h-3 w-3" />
                   Thời gian đọc ước tính
                 </p>
-                <p className="text-lg">{Math.ceil(news.content.split(' ').length / 200)} phút</p>
+                <p className="text-lg">{readingTime} phút</p>
               </div>
             </CardContent>
           </Card>

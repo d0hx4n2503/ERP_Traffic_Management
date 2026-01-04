@@ -26,5 +26,5 @@ export interface PaginatedNewsResponse {
     page: number;
     size: number;
     has_more: boolean;
-    notifications: News[];
+    news: News[];
 }
