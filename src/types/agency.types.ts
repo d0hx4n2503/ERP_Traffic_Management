@@ -20,5 +20,13 @@ export interface PaginatedAgenciesResponse {
     page: number;
     size: number;
     has_more: boolean;
-    agencies: GovAgency[];
+    gov_agency: GovAgency[];
+}
+
+export interface ConnectWalletRequest {
+    user_address: string
+}
+
+export interface TokenResponse {
+    token: string
 }

@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/agency/${id}`,
     DELETE: (id: string) => `/agency/${id}`,
     SEARCH: '/agency/search',
+    CONNECT_WALLET: '/agency/connect-wallet'
   },
 
   // Driver License Management

@@ -27,7 +27,7 @@ import LicenseManagement from './components/LicensesUI/LicenseManagement';
 import VehicleManagement from './components/vehicleUI/VehicleManagement';
 import ViolationsManagement from './components/violationUI/ViolationsManagement';
 import ReportsAnalytics from './components/ReportsAnalytics';
-import TrafficAuthoritiesManagement from './components/TrafficAuthoritiesManagement';
+import TrafficAuthoritiesManagement from './components/GovAgencyUI/TrafficAuthoritiesManagement';
 import NewsManagement from './components/newsUI/NewsManagement';
 import NotificationsManagement from '@/components/notificationUI/NotificationsManagement';
 import TrashBin from './components/TrashBin';

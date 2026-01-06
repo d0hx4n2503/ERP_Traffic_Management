@@ -1,5 +1,5 @@
 import { govAgencyApi } from "@/api/modules/gov_agency.api";
-import { GovAgency, PaginatedAgenciesResponse } from "@/types/agency.types";
+import { ConnectWalletRequest, GovAgency, PaginatedAgenciesResponse, TokenResponse } from "@/types/agency.types";
 
 export const agencyService = {
     getAllAgencies: async (page = 1, size = 20) => {
@@ -25,4 +25,8 @@ export const agencyService = {
     searchAgency: async (): Promise<PaginatedAgenciesResponse> => {
         return await govAgencyApi.search();
     },
+
+    connectWallet: async (credentials: ConnectWalletRequest): Promise<TokenResponse> => {
+        return await govAgencyApi.connectWallet(credentials);
+    }
 }

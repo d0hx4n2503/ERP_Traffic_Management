@@ -1,6 +1,6 @@
 import { API_ENDPOINTS, buildUrl } from '../base/endpoints';
-import { api } from "../base/apiClient";
-import { GovAgency, PaginatedAgenciesResponse } from "@/types/agency.types"
+import { api, setAuthToken } from "../base/apiClient";
+import { ConnectWalletRequest, GovAgency, PaginatedAgenciesResponse, TokenResponse } from "@/types/agency.types"
 
 export const govAgencyApi = {
     getAllAgencies: async (params?: {
@@ -36,5 +36,16 @@ export const govAgencyApi = {
     search: async (): Promise<PaginatedAgenciesResponse> => {
         const url = API_ENDPOINTS.GOV_AGENCY.SEARCH;
         return (await api.get<PaginatedAgenciesResponse>(url)).data;
+    },
+
+    connectWallet: async (credentials: ConnectWalletRequest): Promise<TokenResponse> => {
+        const url = API_ENDPOINTS.GOV_AGENCY.CONNECT_WALLET;
+        const response = await api.post<TokenResponse>(url, credentials)
+        const connectData = response.data;
+
+        //Set auth token
+        setAuthToken(connectData.token);
+
+        return connectData;
     }
 }

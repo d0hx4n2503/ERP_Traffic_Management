@@ -5,7 +5,7 @@ export { default as VehicleManagement } from '../vehicleUI/VehicleManagement';
 export { default as ViolationsManagement } from '../violationUI/ViolationsManagement';
 export { default as NewsManagement } from '../newsUI/NewsManagement';
 export { default as NotificationsManagement } from '../NotificationsManagement';
-export { default as TrafficAuthoritiesManagement } from '../TrafficAuthoritiesManagement';
+export { default as TrafficAuthoritiesManagement } from '../GovAgencyUI/TrafficAuthoritiesManagement';
 export { default as ReportsAnalytics } from '../ReportsAnalytics';
 export { default as Settings } from '../Settings';
 export { default as ModernDataTable } from '../ModernDataTable';
