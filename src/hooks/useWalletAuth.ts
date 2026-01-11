@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useConnect, useAccount, useDisconnect, useSignMessage } from "wagmi";
 import { toast } from "sonner";
 import authService from '@/services/authService';
-import { agencyService } from "@/services/agencyService";
+// import { agencyService } from "@/services/agencyService";
 
 interface UseWalletLoginProps {
     onLogin: () => void;
@@ -43,8 +43,7 @@ export function useWalletLogin({ onLogin }: UseWalletLoginProps) {
                 const signature = await signMessageAsync({ message });
 
                 toast.success(`Xác thực thành công! Địa chỉ: ${address.slice(0, 6)}...${address.slice(-4)}`);
-                console.log("user_address: ", address)
-                await agencyService.connectWallet({ user_address: address })
+                await authService.connectWallet({ user_address: address.toLocaleLowerCase() })
 
                 localStorage.setItem("wallet_address", address);
                 localStorage.setItem("wallet_signature", signature);

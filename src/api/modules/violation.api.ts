@@ -2,11 +2,8 @@ import { api } from '../base/apiClient';
 import { API_ENDPOINTS, buildUrl } from '../base/endpoints';
 import type {
   TrafficViolation,
-  PaymentInfo,
-  Appeal,
   ViolationStatistics,
   PaginatedResponse,
-  ApiResponse,
 } from '@/types';
 
 /**
@@ -33,18 +30,18 @@ export const getViolations = async (params?: {
   sortOrder?: 'asc' | 'desc';
 }): Promise<PaginatedResponse<TrafficViolation>> => {
   const url = buildUrl(API_ENDPOINTS.VIOLATIONS.LIST, params);
-  const response = await api.get<ApiResponse<PaginatedResponse<TrafficViolation>>>(url);
-  return response.data.data!;
+  const response = await api.get<PaginatedResponse<TrafficViolation>>(url);
+  return response.data;
 };
 
 /**
  * Get violation by ID
  */
 export const getViolationById = async (id: string): Promise<TrafficViolation> => {
-  const response = await api.get<ApiResponse<TrafficViolation>>(
+  const response = await api.get<TrafficViolation>(
     API_ENDPOINTS.VIOLATIONS.GET(id)
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -53,10 +50,10 @@ export const getViolationById = async (id: string): Promise<TrafficViolation> =>
 export const getViolationsByLicense = async (
   licenseNumber: string
 ): Promise<TrafficViolation[]> => {
-  const response = await api.get<ApiResponse<TrafficViolation[]>>(
+  const response = await api.get<TrafficViolation[]>(
     API_ENDPOINTS.VIOLATIONS.BY_LICENSE(licenseNumber)
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -65,10 +62,10 @@ export const getViolationsByLicense = async (
 export const getViolationsByVehicle = async (
   plateNumber: string
 ): Promise<TrafficViolation[]> => {
-  const response = await api.get<ApiResponse<TrafficViolation[]>>(
+  const response = await api.get<TrafficViolation[]>(
     API_ENDPOINTS.VIOLATIONS.BY_VEHICLE(plateNumber)
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -77,11 +74,11 @@ export const getViolationsByVehicle = async (
 export const createViolation = async (
   data: Partial<TrafficViolation>
 ): Promise<TrafficViolation> => {
-  const response = await api.post<ApiResponse<TrafficViolation>>(
+  const response = await api.post<TrafficViolation>(
     API_ENDPOINTS.VIOLATIONS.CREATE,
     data
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -91,11 +88,11 @@ export const updateViolation = async (
   id: string,
   data: Partial<TrafficViolation>
 ): Promise<TrafficViolation> => {
-  const response = await api.put<ApiResponse<TrafficViolation>>(
+  const response = await api.put<TrafficViolation>(
     API_ENDPOINTS.VIOLATIONS.UPDATE(id),
     data
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -109,10 +106,10 @@ export const deleteViolation = async (id: string): Promise<void> => {
  * Search violations
  */
 export const searchViolations = async (query: string): Promise<TrafficViolation[]> => {
-  const response = await api.get<ApiResponse<TrafficViolation[]>>(
+  const response = await api.get<TrafficViolation[]>(
     buildUrl(API_ENDPOINTS.VIOLATIONS.SEARCH, { q: query })
   );
-  return response.data.data!;
+  return response.data;
 };
 
 // ==================== Payment ====================
@@ -129,11 +126,11 @@ export const payViolation = async (
     notes?: string;
   }
 ): Promise<TrafficViolation> => {
-  const response = await api.post<ApiResponse<TrafficViolation>>(
+  const response = await api.post<TrafficViolation>(
     API_ENDPOINTS.VIOLATIONS.PAY(id),
     data
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -144,18 +141,18 @@ export const getUnpaidViolations = async (params?: {
   plateNumber?: string;
 }): Promise<TrafficViolation[]> => {
   const url = buildUrl(API_ENDPOINTS.VIOLATIONS.UNPAID, params);
-  const response = await api.get<ApiResponse<TrafficViolation[]>>(url);
-  return response.data.data!;
+  const response = await api.get<TrafficViolation[]>(url);
+  return response.data;
 };
 
 /**
  * Get overdue violations
  */
 export const getOverdueViolations = async (): Promise<TrafficViolation[]> => {
-  const response = await api.get<ApiResponse<TrafficViolation[]>>(
+  const response = await api.get<TrafficViolation[]>(
     API_ENDPOINTS.VIOLATIONS.OVERDUE
   );
-  return response.data.data!;
+  return response.data;
 };
 
 // ==================== Appeals ====================
@@ -175,11 +172,11 @@ export const appealViolation = async (
     }>;
   }
 ): Promise<TrafficViolation> => {
-  const response = await api.post<ApiResponse<TrafficViolation>>(
+  const response = await api.post<TrafficViolation>(
     API_ENDPOINTS.VIOLATIONS.APPEAL(id),
     data
   );
-  return response.data.data!;
+  return response.data;
 };
 
 /**
@@ -193,11 +190,11 @@ export const reviewAppeal = async (
     newFine?: number;
   }
 ): Promise<TrafficViolation> => {
-  const response = await api.post<ApiResponse<TrafficViolation>>(
+  const response = await api.post<TrafficViolation>(
     API_ENDPOINTS.VIOLATIONS.REVIEW_APPEAL(id),
     data
   );
-  return response.data.data!;
+  return response.data;
 };
 
 // ==================== Evidence ====================
@@ -237,8 +234,8 @@ export const getViolationStatistics = async (params?: {
   type?: string;
 }): Promise<ViolationStatistics> => {
   const url = buildUrl(API_ENDPOINTS.VIOLATIONS.STATISTICS, params);
-  const response = await api.get<ApiResponse<ViolationStatistics>>(url);
-  return response.data.data!;
+  const response = await api.get<ViolationStatistics>(url);
+  return response.data;
 };
 
 /**

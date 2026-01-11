@@ -30,7 +30,8 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
     issuing_authority: license?.issuing_authority || '',
     issue_date: toDateInputValue(license?.issue_date) || '',
     expiry_date: toDateInputValue(license?.expiry_date) || '',
-    status: license?.status || 'active'
+    status: license?.status || 'active',
+    point: license?.point
   });
 
   useEffect(() => {
@@ -203,23 +204,34 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
                   </div>
 
                   {isEdit && (
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Trạng thái</Label>
-                      <Select
-                        value={formData.status || ''}
-                        onValueChange={(value: any) => handleChange('status', value)}
-                      >
-                        <SelectTrigger id="status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Chờ duyệt</SelectItem>
-                          <SelectItem value="active">Hoạt động</SelectItem>
-                          <SelectItem value="expired">Hết hạn</SelectItem>
-                          <SelectItem value="pause">Tạm dừng</SelectItem>
-                          <SelectItem value="revoke">Thu hồi</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Trạng thái</Label>
+                        <Select
+                          value={formData.status || ''}
+                          onValueChange={(value: any) => handleChange('status', value)}
+                        >
+                          <SelectTrigger id="status">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Chờ duyệt</SelectItem>
+                            <SelectItem value="active">Hoạt động</SelectItem>
+                            <SelectItem value="expired">Hết hạn</SelectItem>
+                            <SelectItem value="pause">Tạm dừng</SelectItem>
+                            <SelectItem value="revoke">Thu hồi</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="point">Ngày cấp *</Label>
+                        <Input
+                          id="point"
+                          value={formData.point || ''}
+                          onChange={(e) => handleChange('point', e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -233,7 +245,7 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
                   <CardTitle>Hành động</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full" onClick={handleSubmit}>
                     <Save className="mr-2 h-4 w-4" />
                     {isEdit ? 'Cập nhật' : 'Thêm mới'}
                   </Button>

@@ -1,8 +1,6 @@
 import { PaginatedNotificationResponse, UnreadCountResponse } from '@/types/notification.types';
 import { api } from '../base/apiClient';
 import { API_ENDPOINTS, buildUrl } from '../base/endpoints';
-import { ApiResponse } from '@/types/Common.types';
-
 
 export const notificationApi = {
     getAllNotifications: async (params?: {
@@ -15,31 +13,31 @@ export const notificationApi = {
     },
 
     getNotificationById: async (id: string): Promise<Notification> => {
-        const response = await api.get<ApiResponse<Notification>>(
+        const response = await api.get<Notification>(
             API_ENDPOINTS.NOTIFICATIONS.GET(id)
         );
-        return response.data.data!;
+        return response.data;
     },
 
     createNotification: async (
         data: Partial<Notification>
     ): Promise<Notification> => {
-        const response = await api.post<ApiResponse<Notification>>(
+        const response = await api.post<Notification>(
             API_ENDPOINTS.NOTIFICATIONS.CREATE,
             data
         );
-        return response.data.data!;
+        return response.data;
     },
 
     updateNotification: async (
         id: string,
         data: Partial<Notification>
     ): Promise<Notification> => {
-        const response = await api.put<ApiResponse<Notification>>(
+        const response = await api.put<Notification>(
             API_ENDPOINTS.NOTIFICATIONS.UPDATE(id),
             data
         );
-        return response.data.data!;
+        return response.data;
     },
 
     deleteNotification: async (id: string): Promise<void> => {
@@ -56,17 +54,17 @@ export const notificationApi = {
     },
 
     getMyNotificationById: async (id: string): Promise<Notification> => {
-        const response = await api.get<ApiResponse<Notification>>(
+        const response = await api.get<Notification>(
             API_ENDPOINTS.NOTIFICATIONS.GET(id)
         );
-        return response.data.data!;
+        return response.data;
     },
 
     markAsRead: async (id: string): Promise<Notification> => {
-        const response = await api.put<ApiResponse<Notification>>(
+        const response = await api.put<Notification>(
             API_ENDPOINTS.NOTIFICATIONS.MARK_READ(id)
         );
-        return response.data.data!;
+        return response.data;
     },
 
     markAllAsRead: async (): Promise<void> => {
@@ -74,10 +72,10 @@ export const notificationApi = {
     },
 
     getUnreadCount: async (): Promise<UnreadCountResponse> => {
-        const response = await api.get<ApiResponse<UnreadCountResponse>>(
+        const response = await api.get<UnreadCountResponse>(
             API_ENDPOINTS.NOTIFICATIONS.UNREAD
         );
-        return response.data.data!;
+        return response.data;
     },
 
     sendNotification: async (id: string): Promise<void> => {

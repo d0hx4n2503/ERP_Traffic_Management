@@ -8,11 +8,16 @@ import { FileText, Ban, RefreshCw, AlertTriangle, BarChart3, Eye, Edit, Trash2, 
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import LicenseDetailPage from './LicenseDetailPage';
 import LicenseAddEdit from './LicenseAddEdit';
-import ModernDataTable, { ColumnDef, FilterConfig } from './ModernDataTable';
+import ModernDataTable, { ColumnDef } from './ModernDataTable';
 import StatCard from '../StatCard';
 import licenseService from '@/services/licenseService';
+import { useLicenseStats } from '@/hooks/useLicenseStats';
 import type { DriverLicense, LicenseStatus } from '@/types';
 import { statusConfig } from '@/constants/status.constant';
+import { FilterConfig } from '@/constants/notification.constant';
+import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export default function LicenseManagement() {
   const [licenses, setLicenses] = useState<DriverLicense[]>([]);
@@ -26,44 +31,34 @@ export default function LicenseManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
 
-  const [statusStats, setStatusStats] = useState<{ distribution: { status: LicenseStatus; count: number }[]; total: number } | null>(null);
-  const [typeStats, setTypeStats] = useState<{ distribution: { license_type: string; count: number }[]; total: number } | null>(null);
-  const [typeDetailStats, setTypeDetailStats] = useState<{ distribution: { license_type: string; total: number; by_status: { status: LicenseStatus; count: number }[] }[]; grand_total: number } | null>(null);
-  const [cityStats, setCityStats] = useState<{ distribution: { owner_city: string; total: number; by_status: { status: LicenseStatus; count: number }[] }[]; grand_total: number } | null>(null);
+  const {
+    statusStats,
+    typeStats,
+    typeDetailStats,
+    cityStats,
+    loading: statsLoading,
+    error: statsError
+  } = useLicenseStats();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchLicenses = async () => {
       try {
         setLoading(true);
         const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
         setLicenses(licenseData.driver_licenses);
         setTotalCount(licenseData.total_count);
         setTotalPages(licenseData.total_pages);
-
-        // Fetch stats (independent of pagination)
-        const [statusData, typeData, typeDetailData, cityData] = await Promise.all([
-          licenseService.getStatusStats(),
-          licenseService.getLicenseTypeStats(),
-          licenseService.getLicenseTypeDetailStats(),
-          licenseService.getCityDetailStats()
-        ]);
-
-        setStatusStats(statusData);
-        setTypeStats(typeData);
-        setTypeDetailStats(typeDetailData);
-        setCityStats(cityData);
       } catch (err) {
-        setError('Lỗi khi tải dữ liệu');
+        setError('Lỗi khi tải dữ liệu giấy phép lái xe');
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchLicenses();
   }, [currentPage, itemsPerPage]);
 
-  // Helper functions
   const handleViewDetail = (license: DriverLicense) => {
     setSelectedLicense(license);
     setViewMode('detail');
@@ -77,7 +72,6 @@ export default function LicenseManagement() {
   const handleDeleteLicense = async (id: string) => {
     try {
       await licenseService.deleteLicense(id);
-      // Refresh current page
       const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
       setLicenses(licenseData.driver_licenses);
       setTotalCount(licenseData.total_count);
@@ -89,8 +83,7 @@ export default function LicenseManagement() {
 
   const handleAddLicense = async (data: Partial<DriverLicense>) => {
     try {
-      const newLicense = await licenseService.createLicense(data);
-      // Refresh current page
+      await licenseService.createLicense(data);
       const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
       setLicenses(licenseData.driver_licenses);
       setTotalCount(licenseData.total_count);
@@ -103,8 +96,7 @@ export default function LicenseManagement() {
 
   const handleUpdateLicense = async (id: string, data: Partial<DriverLicense>) => {
     try {
-      const updated = await licenseService.updateLicense(id, data);
-      // Refresh current page
+      await licenseService.updateLicense(id, data);
       const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
       setLicenses(licenseData.driver_licenses);
       setTotalCount(licenseData.total_count);
@@ -115,7 +107,6 @@ export default function LicenseManagement() {
     }
   };
 
-  // Analytics data
   const analyticsData = {
     byStatus: statusStats?.distribution.map(item => ({
       name: statusConfig[item.status]?.label || item.status,
@@ -126,7 +117,7 @@ export default function LicenseManagement() {
       count: item.count
     })) || [],
     byCity: cityStats?.distribution.map(item => ({
-      city: item.owner_city.length > 10 ? item.owner_city.substring(0, 10) : item.owner_city,
+      city: item.owner_city.length > 10 ? item.owner_city.substring(0, 10) + '...' : item.owner_city,
       count: item.total
     })) || [],
     pointDistribution: licenses.reduce((acc, l) => {
@@ -140,7 +131,6 @@ export default function LicenseManagement() {
 
   const pointDistChartData = Object.entries(analyticsData.pointDistribution).map(([range, count]) => ({ range, count }));
 
-  // View modes
   if (viewMode === 'detail' && selectedLicense) {
     return (
       <LicenseDetailPage
@@ -173,15 +163,14 @@ export default function LicenseManagement() {
     );
   }
 
-  if (loading) {
-    return <div>Đang tải dữ liệu...</div>;
+  if (loading || statsLoading) {
+    return <div className="flex justify-center items-center h-64">Đang tải dữ liệu...</div>;
   }
 
-  if (error) {
-    return <div>{error}</div>;
+  if (error || statsError) {
+    return <div className="text-red-600 text-center">Lỗi: {error || statsError}</div>;
   }
 
-  // Define columns
   const columns: ColumnDef<DriverLicense>[] = [
     {
       key: 'stt',
@@ -262,14 +251,18 @@ export default function LicenseManagement() {
       key: 'owner_city',
       header: 'Thành phố',
       sortable: true,
-      width: '120px',
-      render: (license) => <span className="text-sm truncate" title={license.owner_city}>{license.owner_city}</span>
+      width: '170px',
+      render: (license) => <span className="text-sm truncate" title={license.owner_city}>
+        {PROVINCE_LABEL[license.owner_city as Province] ?? 'Không xác định'}
+      </span>
     },
     {
       key: 'issuing_authority',
       header: 'Nơi cấp',
       width: '150px',
-      render: (license) => <span className="text-sm text-muted-foreground truncate" title={license.issuing_authority}>{license.issuing_authority}</span>
+      render: (license) => <span className="text-sm text-muted-foreground truncate" title={license.issuing_authority}>
+        {license.issuing_authority}
+      </span>
     },
     {
       key: 'issue_date',
@@ -311,9 +304,7 @@ export default function LicenseManagement() {
       render: (license) => {
         const config = statusConfig[license.status as LicenseStatus];
         return (
-          <Badge
-            className={`${config.color} text-white border-0`}
-          >
+          <Badge className={`${config.color} text-white border-0`}>
             {config.label}
           </Badge>
         );
@@ -368,9 +359,7 @@ export default function LicenseManagement() {
                   <Eye className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Xem chi tiết</p>
-              </TooltipContent>
+              <TooltipContent><p>Xem chi tiết</p></TooltipContent>
             </TooltipUI>
 
             <TooltipUI>
@@ -384,9 +373,7 @@ export default function LicenseManagement() {
                   <Edit className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Chỉnh sửa</p>
-              </TooltipContent>
+              <TooltipContent><p>Chỉnh sửa</p></TooltipContent>
             </TooltipUI>
 
             <TooltipUI>
@@ -400,9 +387,7 @@ export default function LicenseManagement() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Xóa</p>
-              </TooltipContent>
+              <TooltipContent><p>Xóa</p></TooltipContent>
             </TooltipUI>
           </TooltipProvider>
         </div>
@@ -410,7 +395,6 @@ export default function LicenseManagement() {
     }
   ];
 
-  // Define filters
   const licenseTypes = Array.from(new Set(licenses.map(l => l.license_type)));
   const cities = Array.from(new Set(licenses.map(l => l.owner_city)));
 
@@ -453,9 +437,7 @@ export default function LicenseManagement() {
         transition={{ duration: 0.5 }}
       >
         <div className="flex justify-between items-center">
-          <div>
-            {/* Title removed - already in navbar */}
-          </div>
+          <div />
           <div className="flex gap-2">
             <Button onClick={() => setViewMode('add')}>
               <Plus className="mr-2 h-4 w-4" />
@@ -505,7 +487,6 @@ export default function LicenseManagement() {
         />
       </div>
 
-      {/* Analytics */}
       {showAnalytics && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
@@ -525,7 +506,7 @@ export default function LicenseManagement() {
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="count" name="Số lượng">
-                    {analyticsData.byType.map((entry, index) => (
+                    {analyticsData.byType.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>
@@ -585,7 +566,7 @@ export default function LicenseManagement() {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {analyticsData.byStatus.map((entry, index) => (
+                    {analyticsData.byStatus.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -597,7 +578,6 @@ export default function LicenseManagement() {
         </motion.div>
       )}
 
-      {/* Modern Data Table */}
       <div>
         <ModernDataTable
           data={licenses}
@@ -616,7 +596,6 @@ export default function LicenseManagement() {
           onItemsPerPageChange={setItemsPerPage}
         />
 
-        {/* Action Legend */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
