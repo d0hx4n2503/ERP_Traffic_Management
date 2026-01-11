@@ -1,7 +1,3 @@
-// Helper functions for the application
-
-import type { License, Vehicle, Violation } from '@/types';
-
 /**
  * Check if a license is expired
  */
@@ -76,7 +72,7 @@ export const filterBySearch = <T extends Record<string, any>>(
   fields: (keyof T)[],
 ): T[] => {
   if (!searchQuery.trim()) return items;
-  
+
   const query = searchQuery.toLowerCase();
   return items.filter((item) =>
     fields.some((field) => {
@@ -97,9 +93,9 @@ export const sortItems = <T extends Record<string, any>>(
   return [...items].sort((a, b) => {
     const aVal = a[field];
     const bVal = b[field];
-    
+
     if (aVal === bVal) return 0;
-    
+
     const comparison = aVal > bVal ? 1 : -1;
     return direction === 'asc' ? comparison : -comparison;
   });
@@ -119,7 +115,7 @@ export const paginateItems = <T>(
 } => {
   const startIndex = (page - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  
+
   return {
     items: items.slice(startIndex, endIndex),
     totalPages: Math.ceil(items.length / pageSize),
@@ -212,13 +208,13 @@ export const formatLicenseNumber = (licenseNumber: string): string => {
  */
 export const exportToCSV = (data: any[], filename: string): void => {
   if (!data.length) return;
-  
+
   const headers = Object.keys(data[0]);
   const csvContent = [
     headers.join(','),
     ...data.map((row) => headers.map((header) => row[header]).join(',')),
   ].join('\n');
-  
+
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -236,7 +232,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
       await navigator.clipboard.writeText(text);
       return true;
     }
-    
+
     // Fallback to execCommand
     const textArea = document.createElement('textarea');
     textArea.value = text;
@@ -246,7 +242,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
-    
+
     const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
     return successful;
@@ -267,7 +263,7 @@ export const getRelativeTime = (date: string | Date): string => {
   const diffMinutes = Math.floor(diffSeconds / 60);
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
-  
+
   if (diffSeconds < 60) return 'vừa xong';
   if (diffMinutes < 60) return `${diffMinutes} phút trước`;
   if (diffHours < 24) return `${diffHours} giờ trước`;

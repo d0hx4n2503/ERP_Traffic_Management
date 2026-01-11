@@ -15,7 +15,7 @@ export interface DriverLicense {
   owner_city: string;
   license_no: string;
   issue_date: string;
-  expiry_date?: string | null;
+  expiry_date?: string;
   status: LicenseStatus;
   license_type: string; // A1, B1, B2, ...
   authority_id: string;

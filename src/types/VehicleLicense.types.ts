@@ -12,6 +12,7 @@ export interface VehicleRegistration {
   seats?: number;
   issue_date: string;
   issuer: string;
+  registration_code?: string;
   registration_date?: string;
   expiry_date?: string;
   registration_place?: string;

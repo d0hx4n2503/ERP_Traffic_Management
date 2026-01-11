@@ -2,46 +2,17 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip as TooltipUI,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Send,
-  Mail,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  XCircle,
-} from "lucide-react";
-import ModernDataTable, { ColumnDef, FilterConfig } from "@/components/LicensesUI/ModernDataTable";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Eye, Edit, Trash2, Send, Mail, } from "lucide-react";
+import ModernDataTable, { ColumnDef } from "@/components/LicensesUI/ModernDataTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notification } from "@/types/notification.types";
 import notificationService from "@/services/notificationService";
+import { audienceConfig, filters, statusConfig, typeConfig } from "@/constants/notification.constant";
 
 export default function NotificationsManagement() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -101,7 +72,7 @@ export default function NotificationsManagement() {
     {
       key: "code",
       header: "Mã",
-      width: "150px",
+      width: "200px",
       sortable: true,
       render: (item) => (
         <div className="text-left">
@@ -264,59 +235,6 @@ export default function NotificationsManagement() {
           </TooltipProvider>
         </div>
       ),
-    },
-  ];
-
-  const typeConfig = {
-    info: { label: "Thông tin", color: "bg-blue-500", icon: Info },
-    warning: { label: "Cảnh báo", color: "bg-yellow-500", icon: AlertTriangle },
-    important: { label: "Quan trọng", color: "bg-orange-500", icon: AlertTriangle },
-    system: { label: "Hệ thống", color: "bg-purple-500", icon: CheckCircle },
-  };
-
-  const statusConfig = {
-    unread: { label: "Chưa đọc", color: "bg-gray-500" },
-    read: { label: "Đã đọc", color: "bg-green-500" },
-    success: { label: "Thành công", color: "bg-blue-500" },
-  };
-
-  const audienceConfig = {
-    all: "Tất cả",
-    personal: "Cá nhân",
-    group: "Nhóm",
-  };
-
-  const filters: FilterConfig[] = [
-    {
-      key: "type",
-      label: "Loại thông báo",
-      options: [
-        { value: "all", label: "Tất cả" },
-        { value: "info", label: "Thông tin" },
-        { value: "warning", label: "Cảnh báo" },
-        { value: "important", label: "Quan trọng" },
-        { value: "system", label: "Hệ thống" },
-      ],
-    },
-    {
-      key: "status",
-      label: "Trạng thái",
-      options: [
-        { value: "all", label: "Tất cả" },
-        { value: "unread", label: "Chưa đọc" },
-        { value: "read", label: "Đã đọc" },
-        { value: "success", label: "Thành công" },
-      ],
-    },
-    {
-      key: "target",
-      label: "Đối tượng",
-      options: [
-        { value: "all", label: "Tất cả" },
-        { value: "all", label: "Tất cả" },
-        { value: "personal", label: "Cá nhân" },
-        { value: "group", label: "Nhóm" },
-      ],
     },
   ];
 

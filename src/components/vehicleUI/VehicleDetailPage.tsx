@@ -17,20 +17,24 @@ import {
   AlertTriangle,
   Blocks,
   Shield,
+  ShieldCheck,
 } from 'lucide-react';
-import { VehicleRegistration } from '@/types'; // Dùng type thực từ backend
+import { VehicleRegistration } from '@/types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 import { toast } from 'sonner';
 import vehicleService from '@/services/vehicleService';
 import BlockchainConfirmModal from '@/components/BlockchainConfirmModal';
+import { statusConfig } from '@/constants/status.constant';
+import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
+import { VEHICLE_BRAND_LABEL, VehicleBrand } from '@/constants/brand.constant';
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-  'hợp lệ': { label: 'Hợp lệ', color: 'bg-green-500' },
-  'hết hạn': { label: 'Hết hạn', color: 'bg-red-500' },
-  'chờ đăng kiểm': { label: 'Chờ đăng kiểm', color: 'bg-yellow-500' },
-  'còn hiệu lực': { label: 'Còn hiệu lực', color: 'bg-green-500' },
-  'bị thu hồi': { label: 'Bị thu hồi', color: 'bg-red-700' },
-};
+// const statusConfig: Record<string, { label: string; color: string }> = {
+//   'hợp lệ': { label: 'Hợp lệ', color: 'bg-green-500' },
+//   'hết hạn': { label: 'Hết hạn', color: 'bg-red-500' },
+//   'chờ đăng kiểm': { label: 'Chờ đăng kiểm', color: 'bg-yellow-500' },
+//   'còn hiệu lực': { label: 'Còn hiệu lực', color: 'bg-green-500' },
+//   'bị thu hồi': { label: 'Bị thu hồi', color: 'bg-red-700' },
+// };
 
 interface VehicleDetailPageProps {
   vehicle: VehicleRegistration;
@@ -163,9 +167,9 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
               <Separator />
               <InfoRow icon={User} label="Chủ sở hữu" value={vehicle.owner_name} />
               <Separator />
-              <InfoRow icon={Car} label="Loại xe" value={vehicle.type_vehicle} />
+              <InfoRow icon={Car} label="Loại xe" value={VEHICLE_TYPE_LABEL[vehicle.type_vehicle as VehicleType] ?? 'Không xác định'} />
               <Separator />
-              <InfoRow icon={FileText} label="Hãng xe" value={vehicle.brand} />
+              <InfoRow icon={FileText} label="Hãng xe" value={VEHICLE_BRAND_LABEL[vehicle.brand as VehicleBrand] ?? '---'} />
               <Separator />
               <InfoRow icon={FileText} label="Màu xe" value={vehicle.color_vehicle} />
               <Separator />
@@ -177,13 +181,25 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
                 value={new Date(vehicle.issue_date).toLocaleDateString('vi-VN')}
               />
               <Separator />
+              <InfoRow icon={ShieldCheck} label="Mã đăng kiểm" value={vehicle.registration_code ? vehicle.registration_code : 'Chưa đăng kiểm'} />
+              <Separator />
+              <InfoRow
+                icon={Calendar}
+                label="Ngày đăng kiểm"
+                value={
+                  vehicle.registration_date
+                    ? new Date(vehicle.registration_date).toLocaleDateString('vi-VN')
+                    : 'Chưa đăng kiểm'
+                }
+              />
+              <Separator />
               <InfoRow
                 icon={Calendar}
                 label="Hạn đăng kiểm"
                 value={
                   vehicle.expiry_date
                     ? new Date(vehicle.expiry_date).toLocaleDateString('vi-VN')
-                    : 'Chưa có thông tin'
+                    : 'Chưa đăng kiểm'
                 }
               />
               <Separator />

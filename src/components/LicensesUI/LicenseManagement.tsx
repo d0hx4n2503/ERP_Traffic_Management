@@ -12,15 +12,7 @@ import ModernDataTable, { ColumnDef, FilterConfig } from './ModernDataTable';
 import StatCard from '../StatCard';
 import licenseService from '@/services/licenseService';
 import type { DriverLicense, LicenseStatus } from '@/types';
-
-const statusConfig = {
-  pending: { label: 'Chờ duyệt', color: 'bg-blue-500', icon: Clock },
-  active: { label: 'Hoạt động', color: 'bg-green-500', icon: CheckCircle },
-  expired: { label: 'Hết hạn', color: 'bg-gray-500', icon: AlertTriangle },
-  pause: { label: 'Tạm dừng', color: 'bg-yellow-500', icon: AlertTriangle },
-  revoke: { label: 'Thu hồi', color: 'bg-red-500', icon: Ban }
-};
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+import { statusConfig } from '@/constants/status.constant';
 
 export default function LicenseManagement() {
   const [licenses, setLicenses] = useState<DriverLicense[]>([]);

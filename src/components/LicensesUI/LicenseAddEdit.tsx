@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save, X } from 'lucide-react';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 import type { DriverLicense } from '@/types';
+import { toDateInputValue } from '@/lib/helpers/covertTime';
+import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
 
 interface LicenseAddEditProps {
   license?: DriverLicense;
@@ -26,8 +28,8 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
     license_type: license?.license_type || 'B2',
     owner_city: license?.owner_city || 'Hà Nội',
     issuing_authority: license?.issuing_authority || '',
-    issue_date: license?.issue_date || '',
-    expiry_date: license?.expiry_date || '',
+    issue_date: toDateInputValue(license?.issue_date) || '',
+    expiry_date: toDateInputValue(license?.expiry_date) || '',
     status: license?.status || 'active'
   });
 
@@ -153,11 +155,14 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
                         onValueChange={(value: any) => handleChange('owner_city', value)}
                       >
                         <SelectTrigger id="owner_city">
-                          <SelectValue />
+                          <SelectValue placeholder="Chọn tỉnh / thành phố" />
                         </SelectTrigger>
+
                         <SelectContent>
-                          {['Hà Nội', 'TP.HCM', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Nghệ An', 'Thanh Hóa', 'Bình Dương', 'Đồng Nai'].map(city => (
-                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                          {Object.values(Province).map((province) => (
+                            <SelectItem key={province} value={province}>
+                              {PROVINCE_LABEL[province]}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

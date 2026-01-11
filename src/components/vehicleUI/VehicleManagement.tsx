@@ -24,21 +24,15 @@ import {
   Loader2,
 } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import VehicleDetailPage from './VehicleDetailPage'; // Bạn tự tạo hoặc điều chỉnh
-import VehicleAddEdit from './VehicleAddEdit';         // Bạn tự tạo hoặc điều chỉnh
+import VehicleDetailPage from './VehicleDetailPage';
+import VehicleAddEdit from './VehicleAddEdit';
 import ModernDataTable, { ColumnDef, FilterConfig } from '@/components/LicensesUI/ModernDataTable';
 import StatCard from '../StatCard';
 import { toast } from 'sonner';
 import vehicleService from '@/services/vehicleService';
 import type { VehicleRegistration, VehicleRegistrationList, CountItem } from '@/types';
-
-const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  'hợp lệ': { label: 'Hợp lệ', color: 'bg-green-500', icon: CheckCircle },
-  'hết hạn': { label: 'Hết hạn', color: 'bg-red-500', icon: AlertCircle },
-  'chờ đăng kiểm': { label: 'Chờ đăng kiểm', color: 'bg-yellow-500', icon: Calendar },
-};
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#8b5cf6'];
+import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
+import { statusConfig } from '@/constants/status.constant';
 
 export default function VehicleManagement() {
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -47,7 +41,6 @@ export default function VehicleManagement() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [vehicles, setVehicles] = useState<VehicleRegistration[]>([]);
-  const [listData, setListData] = useState<VehicleRegistrationList | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
@@ -205,7 +198,17 @@ export default function VehicleManagement() {
       header: 'Loại xe',
       sortable: true,
       width: '130px',
-      render: (v) => <span className="text-sm truncate" title={v.type_vehicle}>{v.type_vehicle}</span>,
+      render: (v) => {
+        const type = v.type_vehicle as VehicleType;
+        return (
+          <span
+            className="text-sm truncate"
+            title={VEHICLE_TYPE_LABEL[type]}
+          >
+            {VEHICLE_TYPE_LABEL[type] ?? '—'}
+          </span>
+        );
+      }
     },
     {
       key: 'brand',

@@ -21,19 +21,12 @@ import {
   Shield
 } from 'lucide-react';
 import { useBreadcrumb } from '../BreadcrumbContext';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { toast } from 'sonner';
 import BlockchainConfirmModal from '@/components/BlockchainConfirmModal';
 import licenseService from '@/services/licenseService';
 import type { DriverLicense } from '@/types';
-
-const statusConfig = {
-  pending: { label: 'Chờ duyệt', color: 'bg-blue-500' },
-  active: { label: 'Hoạt động', color: 'bg-green-500' },
-  expired: { label: 'Hết hạn', color: 'bg-gray-500' },
-  pause: { label: 'Tạm dừng', color: 'bg-yellow-500' },
-  revoke: { label: 'Thu hồi', color: 'bg-red-500' }
-};
+import { statusConfig } from '@/constants/status.constant';
+import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
 
 interface LicenseDetailPageProps {
   license: DriverLicense;
@@ -52,18 +45,6 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
       { label: 'Quản lý GPLX', onClick: onBack },
       { label: license.license_no }
     ]);
-
-    // TODO: Fetch related violations if API available
-    // Example:
-    // const fetchViolations = async () => {
-    //   try {
-    //     const violations = await licenseService.getViolationsByLicense(license.license_no);
-    //     setRelatedViolations(violations);
-    //   } catch (err) {
-    //     toast.error('Lỗi khi tải lịch sử vi phạm');
-    //   }
-    // };
-    // fetchViolations();
 
     return () => {
       resetBreadcrumbs();
@@ -201,7 +182,11 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <InfoRow
                 icon={MapPin}
                 label="Thành phố"
-                value={license.owner_city}
+                value={
+                  PROVINCE_LABEL[
+                  license.owner_city as Province
+                  ] ?? 'Không xác định'
+                }
               />
               <Separator />
               <InfoRow
@@ -362,7 +347,12 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <div>
                 <p className="text-sm text-muted-foreground">Thời gian còn lại</p>
                 <p className="text-xl">
-                  {license.expiry_date ? licenseService.getDaysUntilExpiry(license) : 'Vô thời hạn'} ngày
+                  {license.expiry_date
+                    ? licenseService.getDaysUntilExpiry(license) > 0
+                      ? `${licenseService.getDaysUntilExpiry(license)} ngày`
+                      : 'Đã hết hạn'
+                    : 'Vô thời hạn'
+                  }
                 </p>
               </div>
               <Separator />

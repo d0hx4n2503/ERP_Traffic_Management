@@ -6,9 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, X } from 'lucide-react';
-import { VehicleRegistration } from '@/types'; // Dùng type từ backend
+import { VehicleRegistration } from '@/types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 import { toast } from 'sonner';
+import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
+import { VEHICLE_BRAND_LABEL, VehicleBrand } from '@/constants/brand.constant';
+import { Status, STATUS_LABEL } from '@/constants/status.constant';
+import { toDateInputValue } from '@/lib/helpers/covertTime';
 
 interface VehicleAddEditProps {
   vehicle?: VehicleRegistration;
@@ -23,19 +27,20 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
   const [formData, setFormData] = useState<Partial<VehicleRegistration>>({
     vehicle_no: vehicle?.vehicle_no || '',
     owner_name: vehicle?.owner_name || '',
-    type_vehicle: vehicle?.type_vehicle || 'Ô tô con',
-    brand: vehicle?.brand || '',
+    type_vehicle: vehicle?.type_vehicle ?? VehicleType.CAR,
+    brand: vehicle?.brand ?? VehicleBrand.TOYOTA,
     color_vehicle: vehicle?.color_vehicle || '',
     issuer: vehicle?.issuer || 'Hà Nội',
-    issue_date: vehicle?.issue_date || new Date().toISOString().split('T')[0],
-    expiry_date: vehicle?.expiry_date || '',
-    registration_date: vehicle?.registration_date || '',
+    issue_date: toDateInputValue(vehicle?.issue_date) || new Date().toISOString().split('T')[0],
+    expiry_date: toDateInputValue(vehicle?.expiry_date) || '',
+    registration_code: vehicle?.registration_code || '',
+    registration_date: toDateInputValue(vehicle?.registration_date) || '',
     seats: vehicle?.seats || undefined,
     chassis_no: vehicle?.chassis_no || '',
     engine_no: vehicle?.engine_no || '',
     color_plate: vehicle?.color_plate || '',
     registration_place: vehicle?.registration_place || '',
-    status: vehicle?.status || 'Còn hiệu lực',
+    status: vehicle?.status ?? Status.VALID,
   });
 
   useEffect(() => {
@@ -116,8 +121,10 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {['Ô tô con', 'Xe máy', 'Ô tô tải', 'Xe khách', 'Xe đầu kéo'].map(t => (
-                            <SelectItem key={t} value={t}>{t}</SelectItem>
+                          {Object.values(VehicleType).map(type => (
+                            <SelectItem key={type} value={type}>
+                              {VEHICLE_TYPE_LABEL[type]}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -145,8 +152,10 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {['Toyota', 'Honda', 'Ford', 'Mazda', 'Hyundai', 'KIA', 'VinFast', 'Mercedes', 'BMW'].map(b => (
-                            <SelectItem key={b} value={b}>{b}</SelectItem>
+                          {Object.values(VehicleBrand).map(brand => (
+                            <SelectItem key={brand} value={brand}>
+                              {VEHICLE_BRAND_LABEL[brand]}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -201,6 +210,15 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="registration_code">Mã đăng kiểm</Label>
+                      <Input
+                        id="registration_code"
+                        value={formData.registration_code || ''}
+                        onChange={(e) => handleChange('registration_code', e.target.value)}
+                        placeholder="VD: DK12345HN"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -235,9 +253,11 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="valid">Còn hiệu lực</SelectItem>
-                        <SelectItem value="expired">Hết hạn</SelectItem>
-                        <SelectItem value="pending">Đang xử lý</SelectItem>
+                        {Object.values(Status).map(status => (
+                          <SelectItem key={status} value={status}>
+                            {STATUS_LABEL[status]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

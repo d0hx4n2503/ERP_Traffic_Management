@@ -37,6 +37,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import PaginationBar from "@/components/PaginationBar";
+import { FilterConfig } from "@/constants/notification.constant";
 
 export interface ColumnDef<T> {
   key: string;
@@ -46,12 +47,6 @@ export interface ColumnDef<T> {
   className?: string;
   headerClassName?: string;
   width?: string; // e.g., '200px', '15%', 'auto'
-}
-
-export interface FilterConfig {
-  key: string;
-  label: string;
-  options: { value: string; label: string }[];
 }
 
 interface ModernDataTableProps<T> {
@@ -299,7 +294,7 @@ export default function ModernDataTable<
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {filter.options.map((option) => (
+                            {filter.options.map((option: any) => (
                               <SelectItem
                                 key={option.value}
                                 value={option.value}
