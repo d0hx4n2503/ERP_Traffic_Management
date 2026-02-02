@@ -32,8 +32,10 @@ import {
   Mail,
   Phone,
   Building2,
+  Blocks,
 } from "lucide-react";
 import { useBreadcrumb } from "./BreadcrumbContext";
+import BlockchainSettings from "./settings/BlockchainSettings";
 
 export default function Settings() {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
@@ -85,7 +87,7 @@ export default function Settings() {
         transition={{ delay: 0.1 }}
       >
         <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="account">
               <User className="mr-2 h-4 w-4" />
               Tài khoản
@@ -93,6 +95,10 @@ export default function Settings() {
             <TabsTrigger value="notifications">
               <Bell className="mr-2 h-4 w-4" />
               Thông báo
+            </TabsTrigger>
+            <TabsTrigger value="blockchain">
+              <Blocks className="mr-2 h-4 w-4" />
+              Blockchain
             </TabsTrigger>
             <TabsTrigger value="security">
               <Shield className="mr-2 h-4 w-4" />
@@ -215,7 +221,7 @@ export default function Settings() {
                       </div>
                       <Switch
                         checked={notifications.email}
-                        onCheckedChange={(value) =>
+                        onCheckedChange={(value: any) =>
                           handleNotificationChange("email", value)
                         }
                       />
@@ -230,7 +236,7 @@ export default function Settings() {
                       </div>
                       <Switch
                         checked={notifications.sms}
-                        onCheckedChange={(value) =>
+                        onCheckedChange={(value: any) =>
                           handleNotificationChange("sms", value)
                         }
                       />
@@ -245,7 +251,7 @@ export default function Settings() {
                       </div>
                       <Switch
                         checked={notifications.push}
-                        onCheckedChange={(value) =>
+                        onCheckedChange={(value: any) =>
                           handleNotificationChange("push", value)
                         }
                       />
@@ -267,7 +273,7 @@ export default function Settings() {
                       </div>
                       <Switch
                         checked={notifications.violations}
-                        onCheckedChange={(value) =>
+                        onCheckedChange={(value: any) =>
                           handleNotificationChange("violations", value)
                         }
                       />
@@ -282,7 +288,7 @@ export default function Settings() {
                       </div>
                       <Switch
                         checked={notifications.expiryReminders}
-                        onCheckedChange={(value) =>
+                        onCheckedChange={(value: any) =>
                           handleNotificationChange("expiryReminders", value)
                         }
                       />
@@ -297,7 +303,7 @@ export default function Settings() {
                       </div>
                       <Switch
                         checked={notifications.inspectionReminders}
-                        onCheckedChange={(value) =>
+                        onCheckedChange={(value: any) =>
                           handleNotificationChange("inspectionReminders", value)
                         }
                       />
@@ -313,6 +319,11 @@ export default function Settings() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Blockchain Settings */}
+          <TabsContent value="blockchain">
+            <BlockchainSettings />
           </TabsContent>
 
           {/* Security Settings */}
