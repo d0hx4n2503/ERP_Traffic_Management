@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
   Blocks,
   Shield,
   ShieldCheck,
+  WalletCards,
 } from 'lucide-react';
 import { VehicleRegistration } from '@/types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
@@ -27,14 +28,7 @@ import BlockchainConfirmModal from '@/components/BlockchainConfirmModal';
 import { statusConfig } from '@/constants/status.constant';
 import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
 import { VEHICLE_BRAND_LABEL, VehicleBrand } from '@/constants/brand.constant';
-
-// const statusConfig: Record<string, { label: string; color: string }> = {
-//   'hợp lệ': { label: 'Hợp lệ', color: 'bg-green-500' },
-//   'hết hạn': { label: 'Hết hạn', color: 'bg-red-500' },
-//   'chờ đăng kiểm': { label: 'Chờ đăng kiểm', color: 'bg-yellow-500' },
-//   'còn hiệu lực': { label: 'Còn hiệu lực', color: 'bg-green-500' },
-//   'bị thu hồi': { label: 'Bị thu hồi', color: 'bg-red-700' },
-// };
+import { issueVehicleRegistrationOnChain } from '@/contracts/vehicleRegistrationService';
 
 interface VehicleDetailPageProps {
   vehicle: VehicleRegistration;
@@ -45,16 +39,21 @@ interface VehicleDetailPageProps {
 export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDetailPageProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
   const [isBlockchainModalOpen, setBlockchainModalOpen] = useState(false);
+  const [currentVehicle, setCurrentVehicle] = useState<VehicleRegistration>(vehicle);
+
+  useEffect(() => {
+    setCurrentVehicle(vehicle);
+  }, [vehicle]);
 
   useEffect(() => {
     setBreadcrumbs([
       { label: 'Trang chính', onClick: onBack, isHome: true },
       { label: 'Phương tiện', onClick: onBack },
-      { label: vehicle.vehicle_no },
+      { label: currentVehicle.vehicle_no },
     ]);
 
     return () => resetBreadcrumbs();
-  }, [vehicle.vehicle_no, onBack, setBreadcrumbs, resetBreadcrumbs]);
+  }, [currentVehicle.vehicle_no, onBack, setBreadcrumbs, resetBreadcrumbs]);
 
   const InfoRow = ({
     icon: Icon,
@@ -78,24 +77,25 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
     </div>
   );
 
-  const handleBlockchainConfirm = async (txHash?: string) => {
-    try {
-      if (!txHash) {
-        throw new Error('Thiếu transaction hash');
-      }
-      await vehicleService.confirmVehicleOnBlockchain(vehicle.id, txHash);
-      toast.success('Đã lưu thông tin phương tiện vào Blockchain thành công!');
-      setBlockchainModalOpen(false);
-      // Có thể refetch vehicle để cập nhật UI nếu cần
-    } catch (err) {
-      toast.error('Lưu vào Blockchain thất bại');
-    }
+  const handleBlockchainConfirm = async () => {
+    const txHash = await issueVehicleRegistrationOnChain(currentVehicle);
+    const updatedVehicle = await vehicleService.confirmVehicleOnBlockchain(currentVehicle.id, txHash);
+    setCurrentVehicle(updatedVehicle);
+    setBlockchainModalOpen(false);
+    toast.success('Đã ký giao dịch và cập nhật dữ liệu blockchain');
   };
 
-  // Tính số ngày còn lại đến hạn đăng kiểm
+  const handleOpenBlockchainModal = () => {
+    if (currentVehicle.on_blockchain) {
+      toast.info('Phương tiện đã lưu trên blockchain.');
+      return;
+    }
+    setBlockchainModalOpen(true);
+  };
+
   const getDaysUntilExpiry = () => {
-    if (!vehicle.expiry_date) return null;
-    const expiry = new Date(vehicle.expiry_date);
+    if (!currentVehicle.expiry_date) return null;
+    const expiry = new Date(currentVehicle.expiry_date);
     const today = new Date();
     const diff = expiry.getTime() - today.getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -105,7 +105,6 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -118,19 +117,19 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
           <div>
             <h2 className="text-3xl">Chi tiết phương tiện</h2>
             <p className="text-muted-foreground mt-1">
-              Thông tin chi tiết phương tiện <span className="font-semibold">{vehicle.vehicle_no}</span>
+              Thông tin chi tiết phương tiện <span className="font-semibold">{currentVehicle.vehicle_no}</span>
             </p>
           </div>
         </div>
 
         <div className="flex gap-2">
-          {vehicle.on_blockchain ? (
+          {currentVehicle.on_blockchain ? (
             <Button variant="outline" size="sm" disabled>
               <Shield className="mr-2 h-4 w-4" />
               Đã lưu trữ Blockchain
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setBlockchainModalOpen(true)}>
+            <Button variant="outline" size="sm" onClick={handleOpenBlockchainModal}>
               <Blocks className="mr-2 h-4 w-4" />
               Lưu vào Blockchain
             </Button>
@@ -151,7 +150,6 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
       </motion.div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {/* Main Info */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -166,32 +164,34 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <InfoRow icon={Car} label="Biển số xe" value={vehicle.vehicle_no} highlight />
+              <InfoRow icon={Car} label="Biển số xe" value={currentVehicle.vehicle_no} highlight />
               <Separator />
-              <InfoRow icon={User} label="Chủ sở hữu" value={vehicle.owner_name} />
+              <InfoRow icon={WalletCards} label="Địa chỉ ví" value={currentVehicle.user_address} highlight />
               <Separator />
-              <InfoRow icon={Car} label="Loại xe" value={VEHICLE_TYPE_LABEL[vehicle.type_vehicle as VehicleType] ?? 'Không xác định'} />
+              <InfoRow icon={User} label="Chủ sở hữu" value={currentVehicle.owner_name} />
               <Separator />
-              <InfoRow icon={FileText} label="Hãng xe" value={VEHICLE_BRAND_LABEL[vehicle.brand as VehicleBrand] ?? '---'} />
+              <InfoRow icon={Car} label="Loại xe" value={VEHICLE_TYPE_LABEL[currentVehicle.type_vehicle as VehicleType] ?? 'Không xác định'} />
               <Separator />
-              <InfoRow icon={FileText} label="Màu xe" value={vehicle.color_vehicle} />
+              <InfoRow icon={FileText} label="Hãng xe" value={VEHICLE_BRAND_LABEL[currentVehicle.brand as VehicleBrand] ?? '---'} />
               <Separator />
-              <InfoRow icon={MapPin} label="Nơi cấp" value={vehicle.issuer} />
+              <InfoRow icon={FileText} label="Màu xe" value={currentVehicle.color_vehicle} />
+              <Separator />
+              <InfoRow icon={MapPin} label="Nơi cấp" value={currentVehicle.issuer} />
               <Separator />
               <InfoRow
                 icon={Calendar}
                 label="Ngày cấp đăng ký"
-                value={new Date(vehicle.issue_date).toLocaleDateString('vi-VN')}
+                value={new Date(currentVehicle.issue_date).toLocaleDateString('vi-VN')}
               />
               <Separator />
-              <InfoRow icon={ShieldCheck} label="Mã đăng kiểm" value={vehicle.registration_code ? vehicle.registration_code : 'Chưa đăng kiểm'} />
+              <InfoRow icon={ShieldCheck} label="Mã đăng kiểm" value={currentVehicle.registration_code ? currentVehicle.registration_code : 'Chưa đăng kiểm'} />
               <Separator />
               <InfoRow
                 icon={Calendar}
                 label="Ngày đăng kiểm"
                 value={
-                  vehicle.registration_date
-                    ? new Date(vehicle.registration_date).toLocaleDateString('vi-VN')
+                  currentVehicle.registration_date
+                    ? new Date(currentVehicle.registration_date).toLocaleDateString('vi-VN')
                     : 'Chưa đăng kiểm'
                 }
               />
@@ -200,8 +200,8 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
                 icon={Calendar}
                 label="Hạn đăng kiểm"
                 value={
-                  vehicle.expiry_date
-                    ? new Date(vehicle.expiry_date).toLocaleDateString('vi-VN')
+                  currentVehicle.expiry_date
+                    ? new Date(currentVehicle.expiry_date).toLocaleDateString('vi-VN')
                     : 'Chưa đăng kiểm'
                 }
               />
@@ -210,12 +210,8 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
                 icon={FileText}
                 label="Trạng thái"
                 value={
-                  <Badge
-                    className={
-                      statusConfig[vehicle.status.toLowerCase()]?.color || 'bg-gray-500'
-                    }
-                  >
-                    {statusConfig[vehicle.status.toLowerCase()]?.label || vehicle.status}
+                  <Badge className={statusConfig[currentVehicle.status.toLowerCase()]?.color || 'bg-gray-500'}>
+                    {statusConfig[currentVehicle.status.toLowerCase()]?.label || currentVehicle.status}
                   </Badge>
                 }
               />
@@ -223,20 +219,18 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
               <InfoRow
                 icon={FileText}
                 label="Nơi đăng kiểm"
-                value={vehicle.registration_place || '—'}
+                value={currentVehicle.registration_place || '—'}
               />
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Side Cards */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
           className="space-y-4"
         >
-          {/* Thao tác */}
           <Card>
             <CardHeader>
               <CardTitle>Thao tác</CardTitle>
@@ -268,7 +262,6 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
             </CardContent>
           </Card>
 
-          {/* Trạng thái hiện tại */}
           <Card>
             <CardHeader>
               <CardTitle>Trạng thái hiện tại</CardTitle>
@@ -277,19 +270,18 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`h-3 w-3 rounded-full ${statusConfig[vehicle.status.toLowerCase()]?.color || 'bg-gray-500'
-                      }`}
+                    className={`h-3 w-3 rounded-full ${statusConfig[currentVehicle.status.toLowerCase()]?.color || 'bg-gray-500'}`}
                   ></div>
                   <div>
                     <p className="font-medium">
-                      {statusConfig[vehicle.status.toLowerCase()]?.label || vehicle.status}
+                      {statusConfig[currentVehicle.status.toLowerCase()]?.label || currentVehicle.status}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {daysUntilExpiry === null
                         ? 'Chưa có hạn đăng kiểm'
                         : daysUntilExpiry > 0
                           ? `Còn ${daysUntilExpiry} ngày đến hạn`
-                          : `Đã hết hạn ${Math.abs(daysUntilExpiry!)} ngày`}
+                          : `Đã hết hạn ${Math.abs(daysUntilExpiry)} ngày`}
                     </p>
                   </div>
                 </div>
@@ -297,7 +289,6 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
             </CardContent>
           </Card>
 
-          {/* Thống kê nhanh */}
           <Card>
             <CardHeader>
               <CardTitle>Thống kê nhanh</CardTitle>
@@ -318,7 +309,7 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
                 <p className="text-sm text-muted-foreground">Tuổi xe (tính từ ngày cấp)</p>
                 <p className="text-xl">
                   {Math.floor(
-                    (new Date().getTime() - new Date(vehicle.issue_date).getTime()) /
+                    (new Date().getTime() - new Date(currentVehicle.issue_date).getTime()) /
                     (1000 * 60 * 60 * 24 * 365)
                   )}{' '}
                   năm
@@ -329,16 +320,18 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
         </motion.div>
       </div>
 
-      {/* Blockchain Confirm Modal */}
       <BlockchainConfirmModal
         open={isBlockchainModalOpen}
         onClose={() => setBlockchainModalOpen(false)}
         onConfirm={handleBlockchainConfirm}
         type="vehicle"
+        requireTxHashInput={false}
+        confirmLabel="Ký và lưu lên Blockchain"
+        processingLabel="Đang ký giao dịch..."
         data={{
-          id: vehicle.id,
-          number: vehicle.vehicle_no,
-          name: vehicle.owner_name,
+          id: currentVehicle.id,
+          number: currentVehicle.vehicle_no,
+          name: currentVehicle.owner_name,
         }}
       />
     </div>

@@ -1,6 +1,7 @@
 export interface VehicleRegistration {
   id: string;
   owner_id?: string;
+  user_address?: string;
   brand: string;
   type_vehicle: string;
   vehicle_no: string;
