@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -18,7 +18,7 @@ import {
   Download,
   Printer,
   Blocks,
-  Shield
+  Shield, WalletCards
 } from 'lucide-react';
 import { useBreadcrumb } from '../BreadcrumbContext';
 import { toast } from 'sonner';
@@ -27,6 +27,12 @@ import licenseService from '@/services/licenseService';
 import type { DriverLicense } from '@/types';
 import { statusConfig } from '@/constants/status.constant';
 import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
+import {
+  getDriverLicenseUserInfoOnChain,
+  issueDriverLicenseOnChain,
+  type DriverLicenseUserOnChainInfo,
+} from '@/contracts/driverLicenseService';
+import OnChainUserInfoModal from './OnChainUserInfoModal';
 
 interface LicenseDetailPageProps {
   license: DriverLicense;
@@ -37,20 +43,28 @@ interface LicenseDetailPageProps {
 export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDetailPageProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
   const [showBlockchainModal, setShowBlockchainModal] = useState(false);
+  const [showOnChainModal, setShowOnChainModal] = useState(false);
+  const [currentLicense, setCurrentLicense] = useState<DriverLicense>(license);
+  const [isCheckingOnChain, setIsCheckingOnChain] = useState(false);
+  const [onChainUserInfo, setOnChainUserInfo] = useState<DriverLicenseUserOnChainInfo | null>(null);
+
+  useEffect(() => {
+    setCurrentLicense(license);
+  }, [license]);
 
   useEffect(() => {
     // Set breadcrumbs
     setBreadcrumbs([
       { label: 'Trang chính', onClick: onBack, isHome: true },
       { label: 'Quản lý GPLX', onClick: onBack },
-      { label: license.license_no }
+      { label: currentLicense.license_no }
     ]);
 
     return () => {
       resetBreadcrumbs();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [license.license_no]);
+  }, [currentLicense.license_no]);
 
   const InfoRow = ({ icon: Icon, label, value, highlight }: any) => (
     <div className="flex items-start gap-4 py-3">
@@ -64,16 +78,36 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
     </div>
   );
 
-  const handleConfirmBlockchain = async (txHash: string) => {
-    try {
-      await licenseService.confirmBlockchainStorage(license.id, txHash);
-      toast.success('Đã lưu vào blockchain');
-      // Refresh license data
-      const updatedLicense = await licenseService.getLicenseById(license.id);
-      // Update parent state if needed, but since props, perhaps reload
-    } catch (err) {
-      toast.error('Lỗi khi lưu vào blockchain');
+  const handleConfirmBlockchain = async () => {
+    const txHash = await issueDriverLicenseOnChain(currentLicense);
+    const updatedLicense = await licenseService.confirmBlockchainStorage(currentLicense.id, txHash);
+    setCurrentLicense(updatedLicense);
+    toast.success('Đã ký giao dịch và cập nhật dữ liệu blockchain');
+  };
+
+  const handleCheckUserOnChain = async () => {
+    const holderAddress = currentLicense.wallet_address || currentLicense.owner_address;
+    if (!holderAddress) {
+      toast.error('Không tìm thấy địa chỉ ví của người dùng để kiểm tra');
+      return;
     }
+
+    setIsCheckingOnChain(true);
+    try {
+      const info = await getDriverLicenseUserInfoOnChain(currentLicense.license_no, holderAddress);
+      setOnChainUserInfo(info);
+      toast.success('Đã kiểm tra thông tin on-chain thành công');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Không thể kiểm tra thông tin on-chain';
+      toast.error(message);
+    } finally {
+      setIsCheckingOnChain(false);
+    }
+  };
+
+  const handleOpenOnChainModal = async () => {
+    setShowOnChainModal(true);
+    await handleCheckUserOnChain();
   };
 
   return (
@@ -91,12 +125,12 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
           <div>
             <h2 className="text-3xl">Chi tiết GPLX</h2>
             <p className="text-muted-foreground mt-1">
-              Thông tin chi tiết giấy phép lái xe {license.license_no}
+              Thông tin chi tiết giấy phép lái xe {currentLicense.license_no}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          {license.on_blockchain ? (
+          {currentLicense.on_blockchain ? (
             <Button
               variant="outline"
               className="bg-gradient-to-r from-cyan-500/10 to-blue-600/10 border-cyan-400 hover:border-cyan-500 text-cyan-700"
@@ -114,7 +148,7 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               onClick={() => setShowBlockchainModal(true)}
             >
               <Blocks className="mr-2 h-4 w-4" />
-              Lưu vào Blockchain
+              LƯU VÀO BLOCKCHAIN
             </Button>
           )}
           <Button variant="outline" size="sm">
@@ -151,32 +185,43 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <InfoRow
                 icon={FileText}
                 label="Số GPLX"
-                value={license.license_no}
+                value={currentLicense.license_no}
+                highlight
+              />
+              <Separator />
+              <InfoRow
+                icon={WalletCards}
+                label="Số GPLX"
+                value={currentLicense.wallet_address ? (
+                  <span className="font-mono text-sm">
+                    {currentLicense.wallet_address}
+                  </span>
+                ) : 'Chưa liên kết ví'}
                 highlight
               />
               <Separator />
               <InfoRow
                 icon={User}
                 label="Người sở hữu"
-                value={license.full_name}
+                value={currentLicense.full_name}
               />
               <Separator />
               <InfoRow
                 icon={CreditCard}
                 label="CCCD/CMND"
-                value={license.identity_no}
+                value={currentLicense.identity_no}
               />
               <Separator />
               <InfoRow
                 icon={FileText}
                 label="Hạng GPLX"
-                value={<Badge variant="outline" className="text-base">{license.license_type}</Badge>}
+                value={<Badge variant="outline" className="text-base">{currentLicense.license_type}</Badge>}
               />
               <Separator />
               <InfoRow
                 icon={MapPin}
                 label="Nơi cấp"
-                value={license.issuing_authority}
+                value={currentLicense.issuing_authority}
               />
               <Separator />
               <InfoRow
@@ -184,7 +229,7 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
                 label="Thành phố"
                 value={
                   PROVINCE_LABEL[
-                  license.owner_city as Province
+                  currentLicense.owner_city as Province
                   ] ?? 'Không xác định'
                 }
               />
@@ -192,21 +237,21 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <InfoRow
                 icon={Calendar}
                 label="Ngày cấp"
-                value={new Date(license.issue_date).toLocaleDateString('vi-VN')}
+                value={new Date(currentLicense.issue_date).toLocaleDateString('vi-VN')}
               />
               <Separator />
               <InfoRow
                 icon={Calendar}
                 label="Ngày hết hạn"
-                value={license.expiry_date ? new Date(license.expiry_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}
+                value={currentLicense.expiry_date ? new Date(currentLicense.expiry_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}
               />
               <Separator />
               <InfoRow
                 icon={AlertTriangle}
                 label="Điểm còn lại"
                 value={
-                  <Badge variant={license.point <= 5 ? 'destructive' : 'secondary'}>
-                    {license.point} điểm
+                  <Badge variant={currentLicense.point <= 5 ? 'destructive' : 'secondary'}>
+                    {currentLicense.point} điểm
                   </Badge>
                 }
               />
@@ -215,8 +260,8 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
                 icon={FileText}
                 label="Trạng thái"
                 value={
-                  <Badge className={statusConfig[license.status].color}>
-                    {statusConfig[license.status].label}
+                  <Badge className={statusConfig[currentLicense.status].color}>
+                    {statusConfig[currentLicense.status].label}
                   </Badge>
                 }
               />
@@ -229,19 +274,19 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" />
-                  Lịch sử vi phạm ({relatedViolations.length})
+                  Lá»‹ch sá»­ vi pháº¡m ({relatedViolations.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Ngày vi phạm</TableHead>
-                      <TableHead>Loại vi phạm</TableHead>
-                      <TableHead>Địa điểm</TableHead>
-                      <TableHead>Phạt tiền</TableHead>
-                      <TableHead>Điểm</TableHead>
-                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>NgÃ y vi pháº¡m</TableHead>
+                      <TableHead>Loáº¡i vi pháº¡m</TableHead>
+                      <TableHead>Äá»‹a Ä‘iá»ƒm</TableHead>
+                      <TableHead>Pháº¡t tiá»n</TableHead>
+                      <TableHead>Äiá»ƒm</TableHead>
+                      <TableHead>Tráº¡ng thÃ¡i</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -250,13 +295,13 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
                         <TableCell>{new Date(v.date).toLocaleDateString('vi-VN')}</TableCell>
                         <TableCell>{v.violationType}</TableCell>
                         <TableCell>{v.location}</TableCell>
-                        <TableCell>{v.fine.toLocaleString('vi-VN')} đ</TableCell>
+                        <TableCell>{v.fine.toLocaleString('vi-VN')} Ä‘</TableCell>
                         <TableCell>
                           <Badge variant="destructive">{v.points}</Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={v.status === 'paid' ? 'default' : v.status === 'overdue' ? 'destructive' : 'secondary'}>
-                            {v.status === 'paid' ? 'Đã nộp' : v.status === 'overdue' ? 'Quá hạn' : 'Chưa nộp'}
+                            {v.status === 'paid' ? 'ÄÃ£ ná»™p' : v.status === 'overdue' ? 'QuÃ¡ háº¡n' : 'ChÆ°a ná»™p'}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -284,17 +329,26 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
                 <Edit className="mr-2 h-4 w-4" />
                 Chỉnh sửa thông tin
               </Button>
+              <Button
+                className="w-full justify-start"
+                variant="outline"
+                onClick={handleOpenOnChainModal}
+                disabled={isCheckingOnChain}
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                {isCheckingOnChain ? 'Đang kiểm tra on-chain...' : 'Kiểm tra thông tin on-chain'}
+              </Button>
               <Button className="w-full justify-start" variant="outline">
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Đổi GPLX
               </Button>
-              {license.status === 'active' && (
+              {currentLicense.status === 'active' && (
                 <Button className="w-full justify-start" variant="outline">
                   <AlertTriangle className="mr-2 h-4 w-4" />
                   Tạm dừng GPLX
                 </Button>
               )}
-              {license.status === 'active' && (
+              {currentLicense.status === 'active' && (
                 <Button className="w-full justify-start text-red-600" variant="outline">
                   <Ban className="mr-2 h-4 w-4" />
                   Thu hồi GPLX
@@ -320,15 +374,15 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className={`h-3 w-3 rounded-full ${statusConfig[license.status].color}`}></div>
+                  <div className={`h-3 w-3 rounded-full ${statusConfig[currentLicense.status].color}`}></div>
                   <div>
-                    <p className="font-medium">{statusConfig[license.status].label}</p>
+                    <p className="font-medium">{statusConfig[currentLicense.status].label}</p>
                     <p className="text-xs text-muted-foreground">
-                      {license.status === 'active'
-                        ? `Còn hiệu lực đến ${license.expiry_date ? new Date(license.expiry_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}`
-                        : license.status === 'expired'
-                          ? `Đã hết hạn từ ${license.expiry_date ? new Date(license.expiry_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}`
-                          : license.status === 'pause'
+                      {currentLicense.status === 'active'
+                        ? `Còn hiệu lực đến ${currentLicense.expiry_date ? new Date(currentLicense.expiry_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}`
+                        : currentLicense.status === 'expired'
+                          ? `Đã hết hạn từ ${currentLicense.expiry_date ? new Date(currentLicense.expiry_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}`
+                          : currentLicense.status === 'pause'
                             ? 'GPLX đang bị tạm dừng'
                             : 'GPLX đã bị thu hồi'}
                     </p>
@@ -347,9 +401,9 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <div>
                 <p className="text-sm text-muted-foreground">Thời gian còn lại</p>
                 <p className="text-xl">
-                  {license.expiry_date
-                    ? licenseService.getDaysUntilExpiry(license) > 0
-                      ? `${licenseService.getDaysUntilExpiry(license)} ngày`
+                  {currentLicense.expiry_date
+                    ? licenseService.getDaysUntilExpiry(currentLicense) > 0
+                      ? `${licenseService.getDaysUntilExpiry(currentLicense)} ngày`
                       : 'Đã hết hạn'
                     : 'Vô thời hạn'
                   }
@@ -358,17 +412,18 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground">Điểm còn lại</p>
-                <p className="text-xl text-red-600">{license.point} điểm</p>
+                <p className="text-xl text-red-600">{currentLicense.point} điểm</p>
               </div>
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground">Thời gian sở hữu</p>
                 <p className="text-xl">
-                  {Math.floor((new Date().getTime() - new Date(license.issue_date).getTime()) / (1000 * 60 * 60 * 24 * 365))} năm
+                  {Math.floor((new Date().getTime() - new Date(currentLicense.issue_date).getTime()) / (1000 * 60 * 60 * 24 * 365))} năm
                 </p>
               </div>
             </CardContent>
           </Card>
+
         </motion.div>
       </div>
 
@@ -378,12 +433,27 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
         onClose={() => setShowBlockchainModal(false)}
         onConfirm={handleConfirmBlockchain}
         type="license"
+        requireTxHashInput={false}
+        confirmLabel="Ký và lưu lên Blockchain"
+        processingLabel="Đang ký giao dịch..."
         data={{
-          id: license.id,
-          name: license.full_name,
-          number: license.license_no
+          id: currentLicense.id,
+          name: currentLicense.full_name,
+          number: currentLicense.license_no
         }}
+      />
+
+      <OnChainUserInfoModal
+        open={showOnChainModal}
+        onClose={() => setShowOnChainModal(false)}
+        onRefresh={handleCheckUserOnChain}
+        loading={isCheckingOnChain}
+        info={onChainUserInfo}
       />
     </div>
   );
 }
+
+
+
+

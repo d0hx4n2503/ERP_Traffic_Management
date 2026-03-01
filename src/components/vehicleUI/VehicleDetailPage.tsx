@@ -78,8 +78,11 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
     </div>
   );
 
-  const handleBlockchainConfirm = async (txHash: string) => {
+  const handleBlockchainConfirm = async (txHash?: string) => {
     try {
+      if (!txHash) {
+        throw new Error('Thiếu transaction hash');
+      }
       await vehicleService.confirmVehicleOnBlockchain(vehicle.id, txHash);
       toast.success('Đã lưu thông tin phương tiện vào Blockchain thành công!');
       setBlockchainModalOpen(false);
