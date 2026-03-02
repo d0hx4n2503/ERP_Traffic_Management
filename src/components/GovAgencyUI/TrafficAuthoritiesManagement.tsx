@@ -154,10 +154,21 @@ export default function TrafficAuthoritiesManagement() {
     }
   };
 
-  const handleSaveSuccess = () => {
-    toast.success("Lưu thay đổi thành công!");
-    setViewMode("list");
-    fetchAgencies();
+  const handleSaveAuthority = async (data: Partial<GovAgency>) => {
+    try {
+      if (viewMode === "add") {
+        await agencyService.createAgencies(data);
+        toast.success("Them co quan thanh cong!");
+      } else if (selectedAuthority) {
+        await agencyService.updateAgencies(selectedAuthority.id, data);
+        toast.success("Cap nhat co quan thanh cong!");
+      }
+      setViewMode("list");
+      setSelectedAuthority(null);
+      fetchAgencies();
+    } catch (err) {
+      toast.error("Luu thay doi that bai");
+    }
   };
 
   // Các cột bảng
@@ -367,7 +378,7 @@ export default function TrafficAuthoritiesManagement() {
       <AuthorityAddEdit
         authority={selectedAuthority}
         onBack={() => setViewMode("detail")}
-        onSave={handleSaveSuccess}
+        onSave={handleSaveAuthority}
       />
     );
   }
@@ -376,7 +387,7 @@ export default function TrafficAuthoritiesManagement() {
     return (
       <AuthorityAddEdit
         onBack={() => setViewMode("list")}
-        onSave={handleSaveSuccess}
+        onSave={handleSaveAuthority}
       />
     );
   }
@@ -487,3 +498,4 @@ export default function TrafficAuthoritiesManagement() {
     </div>
   );
 }
+

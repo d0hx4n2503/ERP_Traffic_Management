@@ -12,6 +12,7 @@ import ViolationDetailPage from './ViolationDetailPage';
 import ViolationAddEdit from './ViolationAddEdit';
 import StatCard from '@/components/StatCard';
 import { toast } from 'sonner';
+import { violationApi } from '@/api/modules/violation.api';
 
 const statusConfig = {
   pending: { label: 'Chờ xử lý', color: 'bg-yellow-500', icon: Clock },
@@ -47,10 +48,37 @@ export default function ViolationsManagement() {
           setSelectedViolation(null);
         }}
         onSave={(data) => {
-          console.log('Saving violation:', data);
-          toast.success(viewMode === 'edit' ? 'Cập nhật vi phạm thành công!' : 'Ghi nhận vi phạm thành công!');
-          setViewMode('list');
-          setSelectedViolation(null);
+          (async () => {
+            try {
+              const violationDate = new Date(data.date);
+              const expiryDate = new Date(violationDate);
+              expiryDate.setDate(expiryDate.getDate() + 30);
+
+              const payload: any = {
+                vehicle_no: data.plateNumber || '',
+                date: violationDate.toISOString(),
+                type: data.violationType || '',
+                address: `${data.location || ''}${data.city ? `, ${data.city}` : ''}`,
+                description: data.description || '',
+                points: Number(data.points || 0),
+                fine_amount: Number(data.fine || 0),
+                expiry_date: expiryDate.toISOString(),
+                status: data.status || 'pending',
+              };
+
+              if (viewMode === 'edit' && selectedViolation) {
+                await violationApi.updateViolation(selectedViolation.id, payload);
+              } else {
+                await violationApi.createViolation(payload);
+              }
+
+              toast.success(viewMode === 'edit' ? 'Cap nhat vi pham thanh cong!' : 'Ghi nhan vi pham thanh cong!');
+              setViewMode('list');
+              setSelectedViolation(null);
+            } catch (err) {
+              toast.error(viewMode === 'edit' ? 'Cap nhat vi pham that bai' : 'Tao vi pham that bai');
+            }
+          })();
         }}
       />
     );

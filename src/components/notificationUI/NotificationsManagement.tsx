@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,15 +28,16 @@ export default function NotificationsManagement() {
     status: "unread",
   });
 
+  const fetchNotifications = useCallback(async () => {
+    const res = await notificationService.getAllNotifications(currentPage, itemsPerPage);
+    setNotifications(res.notifications);
+    setTotalCount(res.total_count);
+    setTotalPages(res.total_pages);
+  }, [currentPage, itemsPerPage]);
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      const res = await notificationService.getAllNotifications(currentPage, itemsPerPage);
-      setNotifications(res.notifications);
-      setTotalCount(res.total_count);
-      setTotalPages(res.total_pages);
-    };
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
   const handleCreate = () => {
     setFormData({ type: "info", target: "all", status: "unread" });
@@ -44,22 +45,25 @@ export default function NotificationsManagement() {
   };
 
   const handleSave = async (send: boolean) => {
-    // const data = { ...formData, active: send };
-    // let not: Notification;
-    // if (viewMode === "add") {
-    //   not = await notificationService.createNotification(data);
-    // } else {
-    //   not = await notificationService.updateNotification(selectedNotification!.id, data);
-    // }
-    // setNotifications((prev) =>
-    //   viewMode === "add"
-    //     ? [...prev, not]
-    //     : prev.map((p) => (p.id === not.id ? not : p))
-    // );
-    // if (send) {
-    //   await notificationService.sendNow(not.id);
-    // }
-    // setViewMode("list");
+    try {
+      const payload: Partial<Notification> = {
+        ...formData,
+        status: send ? "success" : (formData.status || "unread"),
+      };
+
+      if (viewMode === "add") {
+        await notificationService.createNotification(payload);
+      } else if (selectedNotification) {
+        await notificationService.updateNotification(selectedNotification.id, payload);
+      }
+
+      await fetchNotifications();
+      setViewMode("list");
+      setSelectedNotification(null);
+      setFormData({ type: "info", target: "all", status: "unread" });
+    } catch (err) {
+      // Keep form values for retry.
+    }
   };
 
   const columns: ColumnDef<Notification>[] = [

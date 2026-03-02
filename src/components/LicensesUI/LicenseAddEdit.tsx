@@ -24,12 +24,13 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
   const [formData, setFormData] = useState<Partial<DriverLicense>>({
     license_no: license?.license_no || '',
     full_name: license?.full_name || '',
+    dob: toDateInputValue(license?.dob) || '',
     identity_no: license?.identity_no || '',
     license_type: license?.license_type || 'B2',
     owner_city: license?.owner_city || 'Hà Nội',
     issuing_authority: license?.issuing_authority || '',
-    issue_date: toDateInputValue(license?.issue_date) || '',
-    expiry_date: toDateInputValue(license?.expiry_date) || '',
+    issue_date: toDateInputValue(license?.issue_date) || new Date().toISOString().split('T')[0],
+    expiry_date: toDateInputValue(license?.expiry_date) || undefined,
     status: license?.status || 'active',
     point: license?.point
   });
@@ -52,13 +53,26 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
     };
   }, [isEdit, license, onBack, setBreadcrumbs, resetBreadcrumbs]);
 
-  const handleChange = (field: keyof DriverLicense, value: string) => {
+  const handleChange = (field: keyof DriverLicense, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    const parsedPoint =
+      typeof formData.point === 'string'
+        ? Number(formData.point)
+        : formData.point;
+
+    const normalizedData: Partial<DriverLicense> = {
+      ...formData,
+      dob: formData.dob?.trim() || '',
+      issue_date: formData.issue_date?.trim() || '',
+      expiry_date: formData.expiry_date?.trim() || undefined,
+      point: typeof parsedPoint === 'number' && Number.isNaN(parsedPoint) ? undefined : parsedPoint,
+    };
+
+    onSave(normalizedData);
   };
 
   return (
@@ -150,6 +164,16 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
+                      <Label htmlFor="dob">Date of birth *</Label>
+                      <Input
+                        id="dob"
+                        type="date"
+                        value={formData.dob || ''}
+                        onChange={(e) => handleChange('dob', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="owner_city">Thành phố *</Label>
                       <Select
                         value={formData.owner_city || ''}
@@ -197,8 +221,7 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
                         id="expiry_date"
                         type="date"
                         value={formData.expiry_date || ''}
-                        onChange={(e) => handleChange('expiry_date', e.target.value)}
-                        required
+                        onChange={(e) => handleChange('expiry_date', e.target.value || undefined)}
                       />
                     </div>
                   </div>
@@ -245,7 +268,7 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
                   <CardTitle>Hành động</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button type="submit" className="w-full" onClick={handleSubmit}>
+                  <Button type="submit" className="w-full">
                     <Save className="mr-2 h-4 w-4" />
                     {isEdit ? 'Cập nhật' : 'Thêm mới'}
                   </Button>

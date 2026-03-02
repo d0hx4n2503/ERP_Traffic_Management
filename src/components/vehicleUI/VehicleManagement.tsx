@@ -151,7 +151,12 @@ export default function VehicleManagement() {
       <VehicleAddEdit
         vehicle={viewMode === 'edit' ? selectedVehicle ?? undefined : undefined}
         onBack={() => setViewMode(viewMode === 'edit' ? 'detail' : 'list')}
-        onSave={async () => {
+        onSave={async (data) => {
+          if (viewMode === 'add') {
+            await vehicleService.createVehicleRegistration(data);
+          } else if (selectedVehicle) {
+            await vehicleService.updateVehicleRegistration(selectedVehicle.id, data);
+          }
           toast.success(viewMode === 'add' ? 'Thêm phương tiện thành công!' : 'Cập nhật thành công!');
           await fetchVehicles();
           await fetchStats();
