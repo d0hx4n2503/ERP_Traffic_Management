@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
   FileText,
@@ -19,12 +19,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Badge } from "./ui/badge";
 import {
   students,
-  licenses,
-  vehicles,
-  violations,
+  licenses as mockLicenses,
+  vehicles as mockVehicles,
+  violations as mockViolations,
   inspectionCertificates,
   vehicleRegistrations,
-  trafficAuthorities,
+  trafficAuthorities as mockTrafficAuthorities,
 } from "../lib/mockData";
 import {
   BarChart,
@@ -43,6 +43,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import reportsAnalyticsService from "@/services/reportsAnalyticsService";
 
 const COLORS = [
   "#3b82f6",
@@ -59,35 +60,74 @@ export default function ReportsAnalytics() {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(
     "30d"
   );
+  const [analytics, setAnalytics] = useState<Awaited<
+    ReturnType<typeof reportsAnalyticsService.getAnalytics>
+  > | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoadingAnalytics(true);
+        const data = await reportsAnalyticsService.getAnalytics();
+        setAnalytics(data);
+      } finally {
+        setLoadingAnalytics(false);
+      }
+    };
+    load();
+  }, []);
+
+  const normalize = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
 
   // License Analytics
   const licenseStats = {
-    total: licenses.length,
-    active: licenses.filter((l) => l.status === "active").length,
-    expired: licenses.filter((l) => l.status === "expired").length,
-    suspended: licenses.filter((l) => l.status === "suspended").length,
-    revoked: licenses.filter((l) => l.status === "revoked").length,
+    total: analytics?.licenseStatus?.total ?? mockLicenses.length,
+    active:
+      analytics?.licenseStatus?.distribution.find((s) => s.status === "active")
+        ?.count ?? mockLicenses.filter((l) => l.status === "active").length,
+    expired:
+      analytics?.licenseStatus?.distribution.find((s) => s.status === "expired")
+        ?.count ?? mockLicenses.filter((l) => l.status === "expired").length,
+    suspended:
+      analytics?.licenseStatus?.distribution.find((s) => s.status === "pause")
+        ?.count ?? mockLicenses.filter((l) => l.status === "suspended").length,
+    revoked:
+      analytics?.licenseStatus?.distribution.find((s) => s.status === "revoke")
+        ?.count ?? mockLicenses.filter((l) => l.status === "revoked").length,
   };
 
-  const licensesByType = Array.from(
-    new Set(licenses.map((l) => l.licenseType))
-  ).map((type) => ({
-    type,
-    count: licenses.filter((l) => l.licenseType === type).length,
-  }));
+  const licensesByType =
+    analytics?.licenseType?.distribution?.map((item) => ({
+      type: item.license_type,
+      count: item.count,
+    })) ??
+    Array.from(new Set(mockLicenses.map((l) => l.licenseType))).map((type) => ({
+      type,
+      count: mockLicenses.filter((l) => l.licenseType === type).length,
+    }));
 
-  const licensesByCity = Array.from(new Set(licenses.map((l) => l.city))).map(
-    (city) => ({
+  const licensesByCity =
+    analytics?.licenseCityDetail?.distribution?.map((item) => ({
+      city: item.owner_city,
+      active: item.by_status.find((s) => s.status === "active")?.count ?? 0,
+      expired: item.by_status.find((s) => s.status === "expired")?.count ?? 0,
+      suspended: item.by_status.find((s) => s.status === "pause")?.count ?? 0,
+    })) ??
+    Array.from(new Set(mockLicenses.map((l) => l.city))).map((city) => ({
       city,
-      active: licenses.filter((l) => l.city === city && l.status === "active")
+      active: mockLicenses.filter((l) => l.city === city && l.status === "active")
         .length,
-      expired: licenses.filter((l) => l.city === city && l.status === "expired")
+      expired: mockLicenses.filter((l) => l.city === city && l.status === "expired")
         .length,
-      suspended: licenses.filter(
+      suspended: mockLicenses.filter(
         (l) => l.city === city && l.status === "suspended"
       ).length,
-    })
-  );
+    }));
 
   // Student Analytics
   const studentStats = {
@@ -115,19 +155,29 @@ export default function ReportsAnalytics() {
   }));
 
   // Vehicle Analytics
+  const vehicleStatusStats = analytics?.vehicleStatus ?? [];
   const vehicleStats = {
-    total: vehicles.length,
-    valid: vehicles.filter((v) => v.status === "valid").length,
-    expired: vehicles.filter((v) => v.status === "expired").length,
-    pending: vehicles.filter((v) => v.status === "pending").length,
+    total: vehicleStatusStats.reduce((sum, item) => sum + item.count, 0) || mockVehicles.length,
+    valid:
+      vehicleStatusStats.find((s) => normalize(s.key) === "hop le")?.count ??
+      mockVehicles.filter((v) => v.status === "valid").length,
+    expired:
+      vehicleStatusStats.find((s) => normalize(s.key) === "het han")?.count ??
+      mockVehicles.filter((v) => v.status === "expired").length,
+    pending:
+      vehicleStatusStats.find((s) => normalize(s.key).includes("cho"))?.count ??
+      mockVehicles.filter((v) => v.status === "pending").length,
   };
 
-  const vehiclesByType = Array.from(
-    new Set(vehicles.map((v) => v.vehicleType))
-  ).map((type) => ({
-    type,
-    count: vehicles.filter((v) => v.vehicleType === type).length,
-  }));
+  const vehiclesByType =
+    analytics?.vehicleType?.map((item) => ({
+      type: item.key,
+      count: item.count,
+    })) ??
+    Array.from(new Set(mockVehicles.map((v) => v.vehicleType))).map((type) => ({
+      type,
+      count: mockVehicles.filter((v) => v.vehicleType === type).length,
+    }));
 
   // Inspection Certificate Analytics
   const inspectionStats = {
@@ -169,24 +219,35 @@ export default function ReportsAnalytics() {
   }));
 
   // Violation Analytics
+  const violationStatusStats = analytics?.violationStatus ?? [];
   const violationStats = {
-    total: violations.length,
-    pending: violations.filter((v) => v.status === "pending").length,
-    paid: violations.filter((v) => v.status === "paid").length,
-    overdue: violations.filter((v) => v.status === "overdue").length,
-    totalFines: violations.reduce((sum, v) => sum + v.fine, 0),
-    collectedFines: violations
-      .filter((v) => v.status === "paid")
-      .reduce((sum, v) => sum + v.fine, 0),
+    total: analytics?.violationSummary?.total_violations ?? mockViolations.length,
+    pending:
+      violationStatusStats.find((s) => normalize(s.status) === "pending")?.total_count ??
+      mockViolations.filter((v) => v.status === "pending").length,
+    paid:
+      violationStatusStats.find((s) => normalize(s.status) === "paid")?.total_count ??
+      mockViolations.filter((v) => v.status === "paid").length,
+    overdue:
+      violationStatusStats.find((s) => normalize(s.status) === "overdue")?.total_count ??
+      mockViolations.filter((v) => v.status === "overdue").length,
+    totalFines:
+      analytics?.violationSummary?.total_fine_amount ??
+      mockViolations.reduce((sum, v) => sum + v.fine, 0),
+    collectedFines:
+      analytics?.violationSummary?.total_paid_fine_amount ??
+      mockViolations
+        .filter((v) => v.status === "paid")
+        .reduce((sum, v) => sum + v.fine, 0),
   };
 
   const violationsByType = Array.from(
-    new Set(violations.map((v) => v.violationType))
+    new Set(mockViolations.map((v) => v.violationType))
   )
     .map((type) => ({
       type,
-      count: violations.filter((v) => v.violationType === type).length,
-      totalFine: violations
+      count: mockViolations.filter((v) => v.violationType === type).length,
+      totalFine: mockViolations
         .filter((v) => v.violationType === type)
         .reduce((sum, v) => sum + v.fine, 0),
     }))
@@ -194,21 +255,28 @@ export default function ReportsAnalytics() {
     .slice(0, 10);
 
   // Traffic Authority Analytics
+  const agencyList =
+    analytics?.agencies?.gov_agency?.map((a) => ({
+      type: a.type,
+      status: a.status,
+      employees: 0,
+    })) ?? mockTrafficAuthorities;
+
   const authorityStats = {
-    total: trafficAuthorities.length,
-    active: trafficAuthorities.filter((a) => a.status === "active").length,
-    inactive: trafficAuthorities.filter((a) => a.status === "inactive").length,
-    totalEmployees: trafficAuthorities.reduce((sum, a) => sum + a.employees, 0),
+    total: agencyList.length,
+    active: agencyList.filter((a) => a.status === "active").length,
+    inactive: agencyList.filter((a) => a.status !== "active").length,
+    totalEmployees: agencyList.reduce((sum, a) => sum + (a.employees || 0), 0),
   };
 
   const authoritiesByType = Array.from(
-    new Set(trafficAuthorities.map((a) => a.type))
+    new Set(agencyList.map((a) => a.type))
   ).map((type) => ({
     type: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-    count: trafficAuthorities.filter((a) => a.type === type).length,
-    employees: trafficAuthorities
+    count: agencyList.filter((a) => a.type === type).length,
+    employees: agencyList
       .filter((a) => a.type === type)
-      .reduce((sum, a) => sum + a.employees, 0),
+      .reduce((sum, a) => sum + (a.employees || 0), 0),
   }));
 
   const StatCard = ({
@@ -253,6 +321,11 @@ export default function ReportsAnalytics() {
 
   return (
     <div className="space-y-6">
+      {loadingAnalytics && (
+        <div className="text-sm text-muted-foreground">
+          Đang tải dữ liệu phân tích từ API...
+        </div>
+      )}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Tổng quan</TabsTrigger>
@@ -479,14 +552,23 @@ export default function ReportsAnalytics() {
                 </thead>
                 <tbody>
                   {licensesByType.map((item) => {
-                    const activeCount = licenses.filter(
-                      (l) =>
-                        l.licenseType === item.type && l.status === "active"
-                    ).length;
-                    const expiredCount = licenses.filter(
-                      (l) =>
-                        l.licenseType === item.type && l.status === "expired"
-                    ).length;
+                    const detail = analytics?.licenseTypeDetail?.distribution?.find(
+                      (d) => d.license_type === item.type
+                    );
+                    const activeCount =
+                      detail?.by_status.find((s) => s.status === "active")
+                        ?.count ??
+                      mockLicenses.filter(
+                        (l) =>
+                          l.licenseType === item.type && l.status === "active"
+                      ).length;
+                    const expiredCount =
+                      detail?.by_status.find((s) => s.status === "expired")
+                        ?.count ??
+                      mockLicenses.filter(
+                        (l) =>
+                          l.licenseType === item.type && l.status === "expired"
+                      ).length;
                     const rate = ((activeCount / item.count) * 100).toFixed(1);
                     return (
                       <tr
@@ -841,7 +923,7 @@ export default function ReportsAnalytics() {
               <p className="text-sm text-muted-foreground">
                 Đã thu: {violationStats.collectedFines.toLocaleString()} đ (
                 {(
-                  (violationStats.collectedFines / violationStats.totalFines) *
+                  (violationStats.collectedFines / (violationStats.totalFines || 1)) *
                   100
                 ).toFixed(1)}
                 %)
@@ -850,7 +932,7 @@ export default function ReportsAnalytics() {
             <Card className="p-6">
               <h3 className="mb-2">Tỷ lệ xử lý</h3>
               <p className="text-3xl mb-1">
-                {((violationStats.paid / violationStats.total) * 100).toFixed(
+                {((violationStats.paid / (violationStats.total || 1)) * 100).toFixed(
                   1
                 )}
                 %

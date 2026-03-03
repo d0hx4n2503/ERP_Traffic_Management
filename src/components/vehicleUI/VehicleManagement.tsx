@@ -34,6 +34,8 @@ import type { VehicleRegistration, VehicleRegistrationList, CountItem } from '@/
 import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
 import { statusConfig } from '@/constants/status.constant';
 
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+
 export default function VehicleManagement() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleRegistration | null>(null);
@@ -431,7 +433,7 @@ export default function VehicleManagement() {
               <Plus className="mr-2 h-4 w-4" />
               Thêm phương tiện
             </Button>
-            <Button variant="outline" onClick={() => setShowAnalytics(!showAnalytics)}>
+            <Button type="button" variant="outline" onClick={() => setShowAnalytics(!showAnalytics)}>
               <BarChart3 className="mr-2 h-4 w-4" />
               {showAnalytics ? 'Ẩn' : 'Hiện'} phân tích
             </Button>

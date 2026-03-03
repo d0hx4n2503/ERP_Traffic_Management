@@ -140,6 +140,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/traffic/${id}`,
     SEARCH: '/traffic/search',
     STATISTICS: '/traffic/stats',
+    STATS_STATUS: '/traffic/stats/status',
     EXPORT: '/traffic/export',
     BY_LICENSE: (_licenseNumber: string) => '/traffic/me/license',
     BY_VEHICLE: (vehicleId: string) => `/traffic/me/${vehicleId}/vehicle`,
