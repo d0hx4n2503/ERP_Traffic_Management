@@ -1,4 +1,4 @@
-import { PaginatedNotificationResponse, UnreadCountResponse } from '@/types/notification.types';
+import { Notification, PaginatedNotificationResponse, UnreadCountResponse } from '@/types/notification.types';
 import { api } from '../base/apiClient';
 import { API_ENDPOINTS, buildUrl } from '../base/endpoints';
 
@@ -48,34 +48,32 @@ export const notificationApi = {
         page?: number;
         size?: number;
     }): Promise<PaginatedNotificationResponse> => {
-        const url = buildUrl(API_ENDPOINTS.NOTIFICATIONS.LIST, params);
+        const url = buildUrl(API_ENDPOINTS.NOTIFICATIONS.MY_LIST, params);
         const response = await api.get<PaginatedNotificationResponse>(url);
         return response.data;
     },
 
     getMyNotificationById: async (id: string): Promise<Notification> => {
         const response = await api.get<Notification>(
-            API_ENDPOINTS.NOTIFICATIONS.GET(id)
+            API_ENDPOINTS.NOTIFICATIONS.MY_GET(id)
         );
         return response.data;
     },
 
     markAsRead: async (id: string): Promise<Notification> => {
-        const response = await api.put<Notification>(
-            API_ENDPOINTS.NOTIFICATIONS.MARK_READ(id)
-        );
-        return response.data;
+        // Backend currently marks personal notifications as read when fetching detail.
+        return notificationApi.getMyNotificationById(id);
     },
 
     markAllAsRead: async (): Promise<void> => {
-        await api.put(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+        const list = await notificationApi.getMyNotifications({ page: 1, size: 200 });
+        const unread = list.notifications.filter((n) => n.status === 'unread');
+        await Promise.all(unread.map((n) => notificationApi.markAsRead(n.id)));
     },
 
     getUnreadCount: async (): Promise<UnreadCountResponse> => {
-        const response = await api.get<UnreadCountResponse>(
-            API_ENDPOINTS.NOTIFICATIONS.UNREAD
-        );
-        return response.data;
+        const list = await notificationApi.getMyNotifications({ page: 1, size: 200 });
+        return { unread_count: list.notifications.filter((n) => n.status === 'unread').length };
     },
 
     sendNotification: async (id: string): Promise<void> => {

@@ -184,7 +184,9 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: {
     BASE: '/noti',
     LIST: '/noti/getAll',
+    MY_LIST: '/noti/me',
     GET: (id: string) => `/noti/${id}`,
+    MY_GET: (id: string) => `/noti/me/${id}`,
     CREATE: '/noti/create',
     UPDATE: (id: string) => `/noti/${id}`,
     DELETE: (id: string) => `/noti/${id}`,

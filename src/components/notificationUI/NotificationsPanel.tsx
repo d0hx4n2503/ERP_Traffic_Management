@@ -79,7 +79,7 @@ export default function NotificationsPanel({ open, onOpenChange }: Notifications
                     if (notification.status === 'unread') {
                       await notificationService.markAsRead(notification.id);
                       setNotifications(prev => prev.map(p => p.id === notification.id ? { ...p, status: 'read' } : p));
-                      setUnreadCount(unreadCount - 1);
+                      setUnreadCount((prev) => Math.max(0, prev - 1));
                     }
                   }}
                 >

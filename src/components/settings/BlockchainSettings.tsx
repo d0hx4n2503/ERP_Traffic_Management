@@ -501,46 +501,46 @@ export default function BlockchainSettings() {
       </Card>
 
       <ContractCard
-        name="Traffic Controller (Main)"
+        name="Hệ thống hợp đồng chính"
         contractKey="trafficController"
         icon={Blocks}
-        description="Contract chính quản lý tất cả các contract khác trong hệ thống"
+        description="Hợp đồng chính quản lý tất cả các hợp đồng khác trong hệ thống"
         gradient="bg-gradient-to-br from-cyan-50 via-blue-50 to-teal-50"
         borderColor="border-cyan-200"
       />
 
       <ContractCard
-        name="License Registry"
+        name="Đăng ký GPLX"
         contractKey="driverLicense"
         icon={Shield}
-        description="Contract quản lý thông tin giấy phép lái xe (GPLX)"
+        description="Hợp đồng quản lý thông tin giấy phép lái xe (GPLX)"
         gradient="bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50"
         borderColor="border-emerald-200"
       />
 
       <ContractCard
-        name="Vehicle Registry"
+        name="Đăng ký phương tiện"
         contractKey="vehicleRegistration"
         icon={Database}
-        description="Contract quản lý thông tin phương tiện và giấy tờ xe"
+        description="Hợp đồng quản lý thông tin phương tiện và giấy tờ xe"
         gradient="bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50"
         borderColor="border-violet-200"
       />
 
       <ContractCard
-        name="Violation Registry"
+        name="Quản lý vi phạm"
         contractKey="offenceAndRenewal"
         icon={AlertCircle}
-        description="Contract quản lý thông tin vi phạm giao thông"
+        description="Hợp đồng quản lý thông tin vi phạm giao thông"
         gradient="bg-gradient-to-br from-rose-50 via-pink-50 to-red-50"
         borderColor="border-rose-200"
       />
 
       <ContractCard
-        name="Governance Agency"
+        name="Đơn vị quản trị"
         contractKey="govAgency"
         icon={CheckCircle2}
-        description="Contract quản lý các chức năng quản trị và giám sát hệ thống"
+        description="Hợp đồng quản lý các chức năng quản trị và giám sát hệ thống"
         gradient="bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50"
         borderColor="border-amber-200"
       />

@@ -1,5 +1,5 @@
 import notificationApi from '@/api/modules/notification.api';
-import { PaginatedNotificationResponse } from '@/types/notification.types';
+import { Notification, PaginatedNotificationResponse } from '@/types/notification.types';
 
 export const notificationService = {
     // Admin

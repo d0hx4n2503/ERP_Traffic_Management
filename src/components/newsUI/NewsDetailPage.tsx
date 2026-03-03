@@ -214,7 +214,7 @@ export default function NewsDetailPage({ news: initialNews, onBack, onEdit }: Ne
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Mã bài viết</p>
-                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{news.code}</code>
+                <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{news.code || news.id}</code>
               </div>
               <Separator />
               <div>

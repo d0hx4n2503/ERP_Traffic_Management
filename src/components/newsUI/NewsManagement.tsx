@@ -144,9 +144,15 @@ export default function NewsManagement() {
 
   const columns: ColumnDef<News>[] = [
     {
+      key: "code",
+      header: "Mã",
+      width: "8%",
+      render: (news) => <span className="font-mono text-xs">{news.code || news.id}</span>,
+    },
+    {
       key: "title",
       header: "Tiêu đề",
-      width: "35%",
+      width: "30%",
       render: (news) => (
         <div className="space-y-1">
           <div className="flex items-start gap-2">
@@ -159,7 +165,7 @@ export default function NewsManagement() {
     {
       key: "category",
       header: "Danh mục",
-      width: "12%",
+      width: "10%",
       render: (news) => (
         <Badge className={`${categoryConfig[news.category]?.color || "bg-gray-500"} text-white`}>
           {categoryConfig[news.category]?.label || news.category}
@@ -169,7 +175,7 @@ export default function NewsManagement() {
     {
       key: "author",
       header: "Tác giả",
-      width: "15%",
+      width: "13%",
       render: (news) => <span>{news.author}</span>,
     },
     {

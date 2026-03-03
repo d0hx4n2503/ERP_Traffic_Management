@@ -271,7 +271,7 @@ export default function NotificationsManagement() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-muted-foreground">Mã thông báo</Label>
-                <p className="font-mono">{selectedNotification.id}</p>
+                <p className="font-mono">{selectedNotification.code || selectedNotification.id}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Loại</Label>
@@ -468,7 +468,7 @@ export default function NotificationsManagement() {
         columns={columns}
         title="Danh sách thông báo"
         searchPlaceholder="Tìm kiếm theo tiêu đề, nội dung..."
-        searchKeys={["title", "content", "id"]}
+        searchKeys={["title", "content", "code"]}
         filters={filters}
         getItemKey={(item) => item.id}
         actions={
