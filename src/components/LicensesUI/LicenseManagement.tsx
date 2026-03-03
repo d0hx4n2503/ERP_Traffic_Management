@@ -16,6 +16,7 @@ import type { DriverLicense, LicenseStatus } from '@/types';
 import { statusConfig } from '@/constants/status.constant';
 import { FilterConfig } from '@/constants/notification.constant';
 import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
+import { toast } from 'sonner';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
@@ -76,8 +77,10 @@ export default function LicenseManagement() {
       setLicenses(licenseData.driver_licenses);
       setTotalCount(licenseData.total_count);
       setTotalPages(licenseData.total_pages);
+      toast.success('Đã xóa GPLX thành công!');
     } catch (err) {
       console.error('Lỗi khi xóa:', err);
+      toast.error('Xóa GPLX thất bại');
     }
   };
 

@@ -89,8 +89,6 @@ export default function VehicleManagement() {
 
   // Xử lý xóa
   const handleDelete = async (vehicle: VehicleRegistration) => {
-    if (!confirm(`Bạn có chắc muốn xóa phương tiện biển số ${vehicle.vehicle_no}?`)) return;
-
     try {
       await vehicleService.deleteVehicleRegistration(vehicle.id);
       toast.success('Xóa phương tiện thành công!');

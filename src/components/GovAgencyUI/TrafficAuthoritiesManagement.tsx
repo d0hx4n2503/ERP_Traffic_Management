@@ -143,8 +143,6 @@ export default function TrafficAuthoritiesManagement() {
   };
 
   const handleDelete = async (authority: GovAgency) => {
-    if (!confirm(`Bạn có chắc muốn xóa cơ quan "${authority.name}"?`)) return;
-
     try {
       await agencyService.deleteAgencies(authority.id);
       toast.success("Xóa cơ quan thành công!");

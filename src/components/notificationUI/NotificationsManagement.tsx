@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Notification } from "@/types/notification.types";
 import notificationService from "@/services/notificationService";
 import { audienceConfig, filters, statusConfig, typeConfig } from "@/constants/notification.constant";
+import { toast } from "sonner";
 
 export default function NotificationsManagement() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -225,8 +226,13 @@ export default function NotificationsManagement() {
                   size="icon"
                   className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                   onClick={async () => {
-                    await notificationService.deleteNotification(item.id);
-                    setNotifications(notifications.filter((n) => n.id !== item.id));
+                    try {
+                      await notificationService.deleteNotification(item.id);
+                      setNotifications(notifications.filter((n) => n.id !== item.id));
+                      toast.success("Đã xóa thông báo thành công!");
+                    } catch {
+                      toast.error("Xóa thông báo thất bại");
+                    }
                   }}
                 >
                   <Trash2 className="h-4 w-4" />

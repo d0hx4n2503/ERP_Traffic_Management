@@ -124,7 +124,6 @@ export default function NewsManagement() {
   };
 
   const handleDelete = async (news: News) => {
-    if (!confirm("Bạn có chắc chắn muốn xóa bài viết này?")) return;
     try {
       await newsService.deleteNews(news.id);
       toast.success("Đã xóa tin tức thành công!");
