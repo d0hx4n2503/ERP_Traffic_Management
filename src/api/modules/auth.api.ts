@@ -1,6 +1,6 @@
 import { ConnectWalletCredentials, LoginCredentials, AuthResponse, RegisterData } from '@/types/auth.types';
 import { api, setAuthToken } from '../base/apiClient';
-import { API_ENDPOINTS } from '../base/endpoints';
+import { API_ENDPOINTS, buildUrl } from '../base/endpoints';
 import type { User, ApiResponse } from '@/types';
 import { toast } from 'sonner';
 
@@ -103,6 +103,28 @@ export const updateProfile = async (data: Partial<User>): Promise<User> => {
   return updatedUser;
 };
 
+export interface AuthSearchUser {
+  id: string;
+  identity_no: string;
+  full_name: string;
+}
+
+interface UserSearchResponse {
+  users: AuthSearchUser[];
+}
+
+export const findUsersByIdentity = async (
+  identityNo: string,
+  params?: { page?: number; size?: number; orderBy?: string }
+): Promise<AuthSearchUser[]> => {
+  const url = buildUrl(API_ENDPOINTS.AUTH.FIND_BY_IDENTITY, {
+    identity_no: identityNo,
+    ...params,
+  });
+  const response = await api.get<UserSearchResponse>(url);
+  return response.data.users || [];
+};
+
 // Export all functions
 export const authApi = {
   login,
@@ -111,6 +133,7 @@ export const authApi = {
   refreshToken,
   getCurrentUser,
   updateProfile,
+  findUsersByIdentity,
 };
 
 export default authApi;

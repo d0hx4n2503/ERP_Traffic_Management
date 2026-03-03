@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, X } from 'lucide-react';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 import type { DriverLicense } from '@/types';
 import { toDateInputValue } from '@/lib/helpers/covertTime';
 import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
+import authService from '@/services/authService';
+import { useDebounce } from '@/hooks';
 
 interface LicenseAddEditProps {
   license?: DriverLicense;
@@ -34,6 +36,11 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
     status: license?.status || 'active',
     point: license?.point
   });
+  const [identityKeyword, setIdentityKeyword] = useState(license?.identity_no || '');
+  const debouncedIdentityKeyword = useDebounce(identityKeyword, 350);
+  const [identityOptions, setIdentityOptions] = useState<Array<{ id: string; identity_no: string; full_name: string }>>([]);
+  const [showIdentityOptions, setShowIdentityOptions] = useState(false);
+  const [isSearchingIdentity, setIsSearchingIdentity] = useState(false);
 
   useEffect(() => {
     setBreadcrumbs([
@@ -55,6 +62,54 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
 
   const handleChange = (field: keyof DriverLicense, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  useEffect(() => {
+    const keyword = debouncedIdentityKeyword.trim();
+    if (keyword.length < 4 || isEdit) {
+      setIdentityOptions([]);
+      setShowIdentityOptions(false);
+      return;
+    }
+
+    let active = true;
+    setIsSearchingIdentity(true);
+
+    authService
+      .findUsersByIdentity(keyword)
+      .then((users) => {
+        if (!active) {
+          return;
+        }
+        setIdentityOptions(users);
+        setShowIdentityOptions(users.length > 0);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+        setIdentityOptions([]);
+        setShowIdentityOptions(false);
+      })
+      .finally(() => {
+        if (active) {
+          setIsSearchingIdentity(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [debouncedIdentityKeyword, isEdit]);
+
+  const handleSelectIdentity = (selected: { identity_no: string; full_name: string }) => {
+    setFormData((prev) => ({
+      ...prev,
+      identity_no: selected.identity_no,
+      full_name: selected.full_name,
+    }));
+    setIdentityKeyword(selected.identity_no);
+    setShowIdentityOptions(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -152,13 +207,50 @@ export default function LicenseAddEdit({ license, onBack, onSave }: LicenseAddEd
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="identity_no">CCCD/CMND *</Label>
-                      <Input
-                        id="identity_no"
-                        value={formData.identity_no || ''}
-                        onChange={(e) => handleChange('identity_no', e.target.value)}
-                        placeholder="001012345678"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="identity_no"
+                          value={formData.identity_no || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleChange('identity_no', value);
+                            setIdentityKeyword(value);
+                            if (showIdentityOptions) {
+                              setShowIdentityOptions(false);
+                            }
+                          }}
+                          onFocus={() => {
+                            if (identityOptions.length > 0) {
+                              setShowIdentityOptions(true);
+                            }
+                          }}
+                          onBlur={() => {
+                            window.setTimeout(() => setShowIdentityOptions(false), 120);
+                          }}
+                          autoComplete="off"
+                          placeholder="001012345678"
+                          required
+                        />
+                        {isSearchingIdentity && (
+                          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        )}
+                        {showIdentityOptions && (
+                          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-background shadow-sm">
+                            {identityOptions.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-muted"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => handleSelectIdentity(option)}
+                              >
+                                <div className="text-sm font-medium">{option.full_name}</div>
+                                <div className="text-xs text-muted-foreground">{option.identity_no}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

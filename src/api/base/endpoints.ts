@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     LOGIN: '/auth/login',
     LOGOUT: '/auth/logout',
     CONNECTWALLET: '/auth/connectWallet',
+    FIND_BY_IDENTITY: '/auth/find/',
     REGISTER: '/auth/register',
     REFRESH_TOKEN: '/auth/refresh',
     FORGOT_PASSWORD: '/auth/forgot-password',

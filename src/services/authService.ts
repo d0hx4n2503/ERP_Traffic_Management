@@ -31,6 +31,11 @@ export const authService = {
     isAuthenticated: (): boolean => {
         return !!localStorage.getItem('auth_user');
     },
+
+    /** search users by CCCD/CMND */
+    findUsersByIdentity: async (identityNo: string) => {
+        return await authApi.findUsersByIdentity(identityNo, { page: 1, size: 10 });
+    },
 };
 
 export default authService;

@@ -131,6 +131,39 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                     </div>
                   </div>
 
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="color_plate">Màu biển số *</Label>
+                      <Input
+                        id="color_plate"
+                        value={formData.color_plate || ''}
+                        onChange={(e) => handleChange('color_plate', e.target.value)}
+                        placeholder="VD: Trắng"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chassis_no">Số khung *</Label>
+                      <Input
+                        id="chassis_no"
+                        value={formData.chassis_no || ''}
+                        onChange={(e) => handleChange('chassis_no', e.target.value)}
+                        placeholder="VD: RLH123456789"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="engine_no">Số máy *</Label>
+                      <Input
+                        id="engine_no"
+                        value={formData.engine_no || ''}
+                        onChange={(e) => handleChange('engine_no', e.target.value)}
+                        placeholder="VD: EN987654321"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="owner_name">Chủ sở hữu *</Label>
@@ -160,6 +193,16 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="registration_place">Nơi đăng kiểm</Label>
+                    <Input
+                      id="registration_place"
+                      value={formData.registration_place || ''}
+                      onChange={(e) => handleChange('registration_place', e.target.value)}
+                      placeholder="VD: Trung tâm đăng kiểm 50-01S"
+                    />
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-3">
