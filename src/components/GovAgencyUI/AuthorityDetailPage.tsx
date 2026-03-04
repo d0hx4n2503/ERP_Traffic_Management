@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,13 +17,15 @@ import {
   Download,
   Printer,
   Shield,
-  Wallet
+  Wallet,
+  Blocks
 } from 'lucide-react';
 import { GovAgency } from '@/types/agency.types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
-import WalletAddressManager from '@/components/WalletAddressManager';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { toast } from 'sonner';
+import GovAgencyBlockchainModal from './GovAgencyBlockchainModal';
+import { agencyService } from '@/services/agencyService';
 
 const authorityTypeLabels: Record<string, string> = {
   police_department: 'Phòng CSGT',
@@ -43,14 +45,18 @@ interface AuthorityDetailPageProps {
   authority: GovAgency;
   onBack: () => void;
   onEdit: () => void;
+  onAgencyUpdated: (agency: GovAgency) => void;
 }
 
 export default function AuthorityDetailPage({
   authority,
   onBack,
-  onEdit
+  onEdit,
+  onAgencyUpdated
 }: AuthorityDetailPageProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
+  const [isBlockchainModalOpen, setBlockchainModalOpen] = useState(false);
+  const [blockchainMode, setBlockchainMode] = useState<'store' | 'revoke'>('store');
 
   useEffect(() => {
     setBreadcrumbs([
@@ -65,6 +71,20 @@ export default function AuthorityDetailPage({
   }, [authority.name, onBack]);
 
   const isActive = authority.active && authority.status === 'active';
+  const hasWalletAddress = Boolean(authority.user_address);
+
+  const handleStoreOnBlockchain = async (walletAddress?: string) => {
+    if (!walletAddress) return;
+    const updatedAgency = await agencyService.syncAgencyToBlockchain(authority.id, walletAddress);
+    onAgencyUpdated(updatedAgency);
+    toast.success('Da luu GovAgency len blockchain va cap nhat database');
+  };
+
+  const handleRevokeOnBlockchain = async () => {
+    const updatedAgency = await agencyService.revokeAgencyBlockchain(authority.id);
+    onAgencyUpdated(updatedAgency);
+    toast.success('Da thu hoi GovAgency tren blockchain');
+  };
 
   const InfoRow = ({
     icon: Icon,
@@ -108,6 +128,30 @@ export default function AuthorityDetailPage({
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setBlockchainMode('store');
+              setBlockchainModalOpen(true);
+            }}
+          >
+            <Blocks className="mr-2 h-4 w-4" />
+            {hasWalletAddress ? 'Cập nhật Blockchain' : 'Lưu Blockchain'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-600 border-red-200"
+            disabled={!hasWalletAddress}
+            onClick={() => {
+              setBlockchainMode('revoke');
+              setBlockchainModalOpen(true);
+            }}
+          >
+            <Blocks className="mr-2 h-4 w-4" />
+            Hủy địa chị blockchain
+          </Button>
           <Button variant="outline" size="sm">
             <Printer className="mr-2 h-4 w-4" />
             In
@@ -297,7 +341,32 @@ export default function AuthorityDetailPage({
               </CardContent>
             </Card>
           )} */}
-          {authority.user_address && (
+          {!hasWalletAddress && (
+            <Card className="border-amber-200/70 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-amber-800">
+                  <Wallet className="h-4 w-4" />
+                  Chưa có địa chỉ ví blockchain
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Cơ quan này chưa có địa chỉ ví blockchain được liên kết. Vui lòng nhập địa chỉ ví để lưu thông tin lên blockchain và kích hoạt các tính năng liên quan đến blockchain.
+                </p>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setBlockchainMode('store');
+                    setBlockchainModalOpen(true);
+                  }}
+                >
+                  <Blocks className="mr-2 h-4 w-4" />
+                  Nhập địa chỉ và lưu lên blockchain
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          {hasWalletAddress && (
             <Card className="border-cyan-200/50 shadow-lg shadow-cyan-500/5">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -355,6 +424,20 @@ export default function AuthorityDetailPage({
           )}
         </motion.div>
       </div>
+      <GovAgencyBlockchainModal
+        open={isBlockchainModalOpen}
+        mode={blockchainMode}
+        defaultAddress={authority.user_address}
+        agencyName={authority.name}
+        onClose={() => setBlockchainModalOpen(false)}
+        onConfirm={async (address) => {
+          if (blockchainMode === 'store') {
+            await handleStoreOnBlockchain(address);
+            return;
+          }
+          await handleRevokeOnBlockchain();
+        }}
+      />
     </div>
   );
 }

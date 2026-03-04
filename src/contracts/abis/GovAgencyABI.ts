@@ -1,4 +1,4 @@
-export const VehicleRegistrationABI = [
+export const GovAgencyABI = [
     {
         "_format": "hh-sol-artifact-1",
         "contractName": "GovAgency",

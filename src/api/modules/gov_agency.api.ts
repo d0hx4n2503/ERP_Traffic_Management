@@ -33,6 +33,11 @@ export const govAgencyApi = {
         return (await api.delete<GovAgency>(url)).data;
     },
 
+    revokeAgency: async (id: string): Promise<GovAgency> => {
+        const url = API_ENDPOINTS.GOV_AGENCY.REVOKE(id);
+        return (await api.put<GovAgency>(url)).data;
+    },
+
     search: async (): Promise<PaginatedAgenciesResponse> => {
         const url = API_ENDPOINTS.GOV_AGENCY.SEARCH;
         return (await api.get<PaginatedAgenciesResponse>(url)).data;

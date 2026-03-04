@@ -362,6 +362,10 @@ export default function TrafficAuthoritiesManagement() {
     return (
       <AuthorityDetailPage
         authority={selectedAuthority}
+        onAgencyUpdated={(updated) => {
+          setSelectedAuthority(updated);
+          setAgencies((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        }}
         onBack={() => {
           setViewMode("list");
           setSelectedAuthority(null);

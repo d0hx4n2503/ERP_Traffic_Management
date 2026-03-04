@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     CREATE: '/agency/create',
     UPDATE: (id: string) => `/agency/${id}`,
     DELETE: (id: string) => `/agency/${id}`,
+    REVOKE: (id: string) => `/agency/${id}/revoke`,
     SEARCH: '/agency/search',
     CONNECT_WALLET: '/agency/connect-wallet'
   },
