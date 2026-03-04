@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, X } from 'lucide-react';
 import { VehicleRegistration } from '@/types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
 import { toast } from 'sonner';
@@ -13,6 +13,8 @@ import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
 import { VEHICLE_BRAND_LABEL, VehicleBrand } from '@/constants/brand.constant';
 import { Status, STATUS_LABEL } from '@/constants/status.constant';
 import { toDateInputValue } from '@/lib/helpers/covertTime';
+import { useDebounce } from '@/hooks';
+import licenseService from '@/services/licenseService';
 
 interface VehicleAddEditProps {
   vehicle?: VehicleRegistration;
@@ -20,12 +22,19 @@ interface VehicleAddEditProps {
   onSave: (data: Partial<VehicleRegistration>) => Promise<void>;
 }
 
+type OwnerOption = {
+  id: string;
+  full_name: string;
+  identity_no: string;
+};
+
 export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEditProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
   const isEdit = !!vehicle;
 
   const [formData, setFormData] = useState<Partial<VehicleRegistration>>({
     vehicle_no: vehicle?.vehicle_no || '',
+    owner_id: vehicle?.owner_id || undefined,
     owner_name: vehicle?.owner_name || '',
     type_vehicle: vehicle?.type_vehicle ?? VehicleType.CAR,
     brand: vehicle?.brand ?? VehicleBrand.TOYOTA,
@@ -43,41 +52,113 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
     status: vehicle?.status ?? Status.VALID,
   });
 
+  const [ownerKeyword, setOwnerKeyword] = useState(vehicle?.owner_name || '');
+  const debouncedOwnerKeyword = useDebounce(ownerKeyword, 250);
+  const [allOwners, setAllOwners] = useState<OwnerOption[]>([]);
+  const [ownerOptions, setOwnerOptions] = useState<OwnerOption[]>([]);
+  const [showOwnerOptions, setShowOwnerOptions] = useState(false);
+  const [isFetchingOwners, setIsFetchingOwners] = useState(false);
+
   useEffect(() => {
     setBreadcrumbs([
       { label: 'Trang chính', onClick: onBack, isHome: true },
       { label: 'Phương tiện', onClick: onBack },
       ...(isEdit
         ? [
-          { label: vehicle!.vehicle_no, onClick: () => { } },
-          { label: 'Chỉnh sửa' }
-        ]
-        : [{ label: 'Thêm phương tiện mới' }])
+            { label: vehicle!.vehicle_no, onClick: () => {} },
+            { label: 'Chỉnh sửa' },
+          ]
+        : [{ label: 'Thêm phương tiện mới' }]),
     ]);
 
     return () => resetBreadcrumbs();
   }, [isEdit, vehicle, onBack, setBreadcrumbs, resetBreadcrumbs]);
 
   const handleChange = (field: keyof Partial<VehicleRegistration>, value: string | number | undefined) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  useEffect(() => {
+    if (isEdit) return;
+
+    let active = true;
+    setIsFetchingOwners(true);
+
+    licenseService
+      .getAllLicenses(1, 200)
+      .then((response) => {
+        if (!active) return;
+        const options = (response.driver_licenses || []).map((license) => ({
+          id: license.id,
+          full_name: license.full_name,
+          identity_no: license.identity_no,
+        }));
+        setAllOwners(options);
+      })
+      .catch(() => {
+        if (!active) return;
+        toast.error('Không thể tải danh sách chủ sở hữu');
+      })
+      .finally(() => {
+        if (active) setIsFetchingOwners(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isEdit]);
+
+  useEffect(() => {
+    if (isEdit) return;
+
+    const keyword = debouncedOwnerKeyword.trim().toLowerCase();
+    if (!keyword) {
+      setOwnerOptions([]);
+      setShowOwnerOptions(false);
+      return;
+    }
+
+    const filtered = allOwners
+      .filter(
+        (owner) =>
+          owner.full_name.toLowerCase().includes(keyword) ||
+          owner.identity_no.toLowerCase().includes(keyword) ||
+          owner.id.toLowerCase().includes(keyword)
+      )
+      .slice(0, 10);
+
+    setOwnerOptions(filtered);
+    setShowOwnerOptions(filtered.length > 0);
+  }, [debouncedOwnerKeyword, allOwners, isEdit]);
+
+  const handleSelectOwner = (owner: OwnerOption) => {
+    setFormData((prev) => ({
+      ...prev,
+      owner_id: owner.id,
+      owner_name: owner.full_name,
+    }));
+    setOwnerKeyword(owner.full_name);
+    setShowOwnerOptions(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isEdit && !formData.owner_id) {
+      toast.error('Vui lòng chọn chủ sở hữu từ danh sách gợi ý');
+      return;
+    }
+
     try {
       await onSave(formData);
-    } catch (err) {
+    } catch {
       toast.error(isEdit ? 'Cập nhật thất bại' : 'Thêm mới thất bại');
     }
   };
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onBack}>
             <ArrowLeft className="h-5 w-5" />
@@ -113,15 +194,12 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="type_vehicle">Loại xe *</Label>
-                      <Select
-                        value={formData.type_vehicle}
-                        onValueChange={(value: any) => handleChange('type_vehicle', value)}
-                      >
+                      <Select value={formData.type_vehicle} onValueChange={(value) => handleChange('type_vehicle', value)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(VehicleType).map(type => (
+                          {Object.values(VehicleType).map((type) => (
                             <SelectItem key={type} value={type}>
                               {VEHICLE_TYPE_LABEL[type]}
                             </SelectItem>
@@ -167,25 +245,66 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="owner_name">Chủ sở hữu *</Label>
-                      <Input
-                        id="owner_name"
-                        value={formData.owner_name || ''}
-                        onChange={(e) => handleChange('owner_name', e.target.value)}
-                        placeholder="Nguyễn Văn A"
-                        required
-                      />
+                      <div className="relative">
+                        <Input
+                          id="owner_name"
+                          value={formData.owner_name || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            handleChange('owner_name', value);
+                            if (!isEdit) {
+                              setOwnerKeyword(value);
+                              handleChange('owner_id', undefined);
+                            }
+                          }}
+                          onFocus={() => {
+                            if (!isEdit && ownerOptions.length > 0) {
+                              setShowOwnerOptions(true);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!isEdit) {
+                              window.setTimeout(() => setShowOwnerOptions(false), 120);
+                            }
+                          }}
+                          autoComplete="off"
+                          placeholder="Nhập tên chủ sở hữu"
+                          required
+                        />
+                        {!isEdit && isFetchingOwners && (
+                          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        )}
+                        {!isEdit && showOwnerOptions && (
+                          <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-background shadow-sm">
+                            {ownerOptions.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                className="w-full px-3 py-2 text-left hover:bg-muted"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => handleSelectOwner(option)}
+                              >
+                                <div className="text-sm font-medium">{option.full_name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  owner_id: {option.id} | CCCD: {option.identity_no}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {!isEdit && formData.owner_id && (
+                        <p className="text-xs text-muted-foreground">Đã chọn owner_id: {formData.owner_id}</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="brand">Hãng xe *</Label>
-                      <Select
-                        value={formData.brand}
-                        onValueChange={(value: any) => handleChange('brand', value)}
-                      >
+                      <Select value={formData.brand} onValueChange={(value) => handleChange('brand', value)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(VehicleBrand).map(brand => (
+                          {Object.values(VehicleBrand).map((brand) => (
                             <SelectItem key={brand} value={brand}>
                               {VEHICLE_BRAND_LABEL[brand]}
                             </SelectItem>
@@ -208,16 +327,15 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
                       <Label htmlFor="color_vehicle">Màu xe</Label>
-                      <Select
-                        value={formData.color_vehicle}
-                        onValueChange={(value: any) => handleChange('color_vehicle', value)}
-                      >
+                      <Select value={formData.color_vehicle} onValueChange={(value) => handleChange('color_vehicle', value)}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {['Trắng', 'Đen', 'Bạc', 'Xám', 'Đỏ', 'Xanh'].map(c => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          {['Trắng', 'Đen', 'Bạc', 'Xám', 'Đỏ', 'Xanh'].map((color) => (
+                            <SelectItem key={color} value={color}>
+                              {color}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -228,7 +346,7 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                         id="seats"
                         type="number"
                         value={formData.seats || ''}
-                        onChange={(e) => handleChange('seats', parseInt(e.target.value) || undefined)}
+                        onChange={(e) => handleChange('seats', parseInt(e.target.value, 10) || undefined)}
                       />
                     </div>
                     <div className="space-y-2">
@@ -285,18 +403,14 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                     </div>
                   </div>
 
-                  {/* {isEdit && ( */}
                   <div className="space-y-2">
                     <Label htmlFor="status">Trạng thái</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value: any) => handleChange('status', value)}
-                    >
+                    <Select value={formData.status} onValueChange={(value) => handleChange('status', value)}>
                       <SelectTrigger id="status">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(Status).map(status => (
+                        {Object.values(Status).map((status) => (
                           <SelectItem key={status} value={status}>
                             {STATUS_LABEL[status]}
                           </SelectItem>
@@ -304,7 +418,6 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* )} */}
                 </CardContent>
               </Card>
             </div>
@@ -333,8 +446,8 @@ export default function VehicleAddEdit({ vehicle, onBack, onSave }: VehicleAddEd
                 <CardContent className="text-sm text-muted-foreground space-y-2">
                   <p>• Tất cả các trường đánh dấu (*) là bắt buộc</p>
                   <p>• Biển số xe phải theo định dạng chuẩn</p>
-                  <p>• Số điện thoại phải là số hợp lệ</p>
-                  <p>• Ngày đăng kiểm tiếp theo phải sau ngày đăng kiểm gần nhất</p>
+                  <p>• Chủ sở hữu nên chọn từ danh sách để lưu đúng owner_id</p>
+                  <p>• Hạn đăng kiểm phải sau ngày đăng kiểm</p>
                 </CardContent>
               </Card>
             </div>
