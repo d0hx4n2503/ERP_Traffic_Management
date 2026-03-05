@@ -43,8 +43,8 @@ export function useWalletLogin({ onLogin }: UseWalletLoginProps) {
                 const signature = await signMessageAsync({ message });
 
                 toast.success(`Xác thực thành công! Địa chỉ: ${address.slice(0, 6)}...${address.slice(-4)}`);
-                console.log(address.toLocaleLowerCase())
-                await authService.connectWallet({ user_address: address.toLocaleLowerCase() })
+
+                await authService.connectWallet({ user_address: address })
 
                 localStorage.setItem("wallet_address", address);
                 localStorage.setItem("wallet_signature", signature);
