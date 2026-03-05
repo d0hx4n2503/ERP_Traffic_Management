@@ -10,6 +10,7 @@ import { Button } from "./ui/button";
 import { Wallet, Shield, Lock, CheckCircle, ExternalLink } from "lucide-react";
 import { useWalletLogin } from "@/hooks/useWalletAuth";
 import { toast } from "sonner";
+import { agencyService } from "@/services/agencyService";
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -168,8 +169,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </div>
 
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     const demoAddress = "0x335145400C12958600C0542F9180e03B917F7BbB";
+                    await agencyService.connectWallet({ user_address: demoAddress });
                     localStorage.setItem("wallet_address", demoAddress);
                     localStorage.setItem("wallet_signature", "0x6d9b8516ce9c75ff9b795e202b38034d94c94e380939dbdd2f74d686f492ff6c4c9dd3f14179675f7a1bcee7c6c3c178dd125aa2d320e60f3afe3aceb85d57891c");
                     localStorage.setItem("wallet_nonce", "999999");

@@ -1,5 +1,5 @@
 import { govAgencyApi } from "@/api/modules/gov_agency.api";
-import { ConnectWalletRequest, GovAgency, PaginatedAgenciesResponse, TokenResponse } from "@/types/agency.types";
+import { AgencyAuthResponse, ConnectWalletRequest, GovAgency, PaginatedAgenciesResponse } from "@/types/agency.types";
 import { issueGovAgencyOnChain, revokeGovAgencyOnChain, updateGovAgencyOnChain } from "@/contracts/govAgencyService";
 import { ethers } from "ethers";
 
@@ -62,7 +62,7 @@ export const agencyService = {
         return await govAgencyApi.search();
     },
 
-    connectWallet: async (credentials: ConnectWalletRequest): Promise<TokenResponse> => {
+    connectWallet: async (credentials: ConnectWalletRequest): Promise<AgencyAuthResponse> => {
         return await govAgencyApi.connectWallet(credentials);
     }
 }

@@ -82,8 +82,13 @@ function AppContent() {
   useEffect(() => {
     document.documentElement.classList.remove('dark');
 
-    // Check if user is logged in (from localStorage)
-    const loggedIn = localStorage.getItem('erp_logged_in') === 'true';
+    // Require both UI login flag and auth token to avoid stale sessions.
+    const loggedInFlag = localStorage.getItem('erp_logged_in') === 'true';
+    const hasAuthToken = !!localStorage.getItem('auth_token');
+    const loggedIn = loggedInFlag && hasAuthToken;
+    if (!loggedIn) {
+      localStorage.removeItem('erp_logged_in');
+    }
     setIsLoggedIn(loggedIn);
 
     const handleResize = () => {
@@ -95,6 +100,11 @@ function AppContent() {
   }, []);
 
   const handleLogin = () => {
+    if (!localStorage.getItem('auth_token')) {
+      toast.error('Khong tim thay token xac thuc. Vui long dang nhap lai.');
+      setIsLoggedIn(false);
+      return;
+    }
     localStorage.setItem('erp_logged_in', 'true');
     setIsLoggedIn(true);
   };

@@ -27,6 +27,7 @@ export interface ConnectWalletRequest {
     user_address: string
 }
 
-export interface TokenResponse {
+export interface AgencyAuthResponse {
+    gov_agencies: GovAgency;
     token: string
 }

@@ -81,6 +81,7 @@ apiClient.interceptors.response.use(
           // Unauthorized
           localStorage.removeItem('auth_token');
           localStorage.removeItem('auth_user');
+          localStorage.removeItem('erp_logged_in');
           window.location.href = '/login';
           break;
 
