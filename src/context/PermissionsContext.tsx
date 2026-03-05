@@ -15,6 +15,7 @@ export interface Permission {
   canViewViolations: boolean;
   canEditViolations: boolean;
   canViewReports: boolean;
+  canViewBlockchainData: boolean;
   canViewAuthorities: boolean;
   canEditAuthorities: boolean;
   canViewNews: boolean;
@@ -76,6 +77,7 @@ function getPermissionsForRole(role: UserRole, locationScope: LocationScope): Pe
         canViewViolations: true,
         canEditViolations: true,
         canViewReports: true,
+        canViewBlockchainData: true,
         canViewAuthorities: true,
         canEditAuthorities: true,
         canViewNews: true,
@@ -98,6 +100,7 @@ function getPermissionsForRole(role: UserRole, locationScope: LocationScope): Pe
         canViewViolations: true,
         canEditViolations: true,
         canViewReports: true,
+        canViewBlockchainData: true,
         canViewAuthorities: false, // Không có quyền quản lý cơ quan giao thông
         canEditAuthorities: false,
         canViewNews: true,
@@ -121,6 +124,7 @@ function getPermissionsForRole(role: UserRole, locationScope: LocationScope): Pe
         canViewViolations: true,
         canEditViolations: false,
         canViewReports: true,
+        canViewBlockchainData: true,
         canViewAuthorities: true,
         canEditAuthorities: false,
         canViewNews: true,
@@ -195,6 +199,8 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         return permissions.canViewViolations;
       case 'reports':
         return permissions.canViewReports;
+      case 'blockchain-data':
+        return permissions.canViewBlockchainData;
       case 'authorities':
         return permissions.canViewAuthorities;
       case 'news':

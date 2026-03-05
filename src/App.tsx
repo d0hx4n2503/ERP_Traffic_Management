@@ -13,7 +13,8 @@ import {
   Newspaper,
   Mail,
   Trash2,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Database
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { PermissionsProvider } from './context/PermissionsContext';
@@ -35,6 +36,7 @@ import Settings from './components/Settings';
 import NotificationsPanel from '@/components/notificationUI/NotificationsPanel';
 import { notifications } from './lib/mockData';
 import authService from './services/authService';
+import ContractManagement from './components/BlockchainDataUI/ContractManagement';
 
 type MenuItem = {
   id: string;
@@ -49,6 +51,7 @@ const menuItems: MenuItem[] = [
   { id: 'vehicles', label: 'Phương tiện', icon: Car, component: VehicleManagement },
   { id: 'violations', label: 'Vi phạm', icon: AlertCircle, component: ViolationsManagement },
   { id: 'reports', label: 'Báo cáo & Phân tích', icon: BarChart3, component: ReportsAnalytics },
+  { id: 'blockchain-data', label: 'Dữ liệu Blockchain', icon: Database, component: ContractManagement },
   { id: 'authorities', label: 'Cơ quan giao thông', icon: Building2, component: TrafficAuthoritiesManagement },
   { id: 'news', label: 'Đăng tin tức', icon: Newspaper, component: NewsManagement },
   { id: 'notifications-mgmt', label: 'Quản lý thông báo', icon: Mail, component: NotificationsManagement },
