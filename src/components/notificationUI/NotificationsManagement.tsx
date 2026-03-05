@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Eye, Edit, Trash2, Send, Mail, } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, Send, Mail } from "lucide-react";
 import ModernDataTable, { ColumnDef } from "@/components/LicensesUI/ModernDataTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,31 +14,36 @@ import { Notification } from "@/types/notification.types";
 import notificationService from "@/services/notificationService";
 import { audienceConfig, filters, statusConfig, typeConfig } from "@/constants/notification.constant";
 import { toast } from "sonner";
+import { useDataLists } from "@/context/DataListContext";
 
 export default function NotificationsManagement() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const {
+    notificationList,
+    setNotificationPage,
+    setNotificationItemsPerPage,
+    ensureNotificationList,
+    refreshNotificationList,
+  } = useDataLists();
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [viewMode, setViewMode] = useState<"list" | "detail" | "add" | "edit">("list");
   const [formData, setFormData] = useState<Partial<Notification>>({
     type: "info",
     target: "all",
     status: "unread",
   });
-
-  const fetchNotifications = useCallback(async () => {
-    const res = await notificationService.getAllNotifications(currentPage, itemsPerPage);
-    setNotifications(res.notifications);
-    setTotalCount(res.total_count);
-    setTotalPages(res.total_pages);
-  }, [currentPage, itemsPerPage]);
+  const {
+    items: notifications,
+    totalCount,
+    totalPages,
+    currentPage,
+    itemsPerPage,
+  } = notificationList;
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (viewMode === "list") {
+      void ensureNotificationList();
+    }
+  }, [viewMode, currentPage, itemsPerPage]);
 
   const handleCreate = () => {
     setFormData({ type: "info", target: "all", status: "unread" });
@@ -58,21 +63,21 @@ export default function NotificationsManagement() {
         await notificationService.updateNotification(selectedNotification.id, payload);
       }
 
-      await fetchNotifications();
+      await refreshNotificationList();
       setViewMode("list");
       setSelectedNotification(null);
       setFormData({ type: "info", target: "all", status: "unread" });
-    } catch (err) {
-      // Keep form values for retry.
+    } catch {
+      toast.error("Lưu thông báo thất bại");
     }
   };
 
   const columns: ColumnDef<Notification>[] = [
     {
-      key: 'stt',
-      header: 'STT',
-      width: '60px',
-      render: (_, index) => <span className="text-sm">{index + 1}</span>
+      key: "stt",
+      header: "STT",
+      width: "60px",
+      render: (_, index) => <span className="text-sm">{index + 1}</span>,
     },
     {
       key: "code",
@@ -81,10 +86,7 @@ export default function NotificationsManagement() {
       sortable: true,
       render: (item) => (
         <div className="text-left">
-          <div
-            className="font-medium truncate max-w-[200px]"
-            title={item.code}
-          >
+          <div className="font-medium truncate max-w-[200px]" title={item.code}>
             {item.code}
           </div>
         </div>
@@ -97,10 +99,7 @@ export default function NotificationsManagement() {
       sortable: true,
       render: (item) => (
         <div className="text-left">
-          <div
-            className="font-medium truncate max-w-[200px]"
-            title={item.title}
-          >
+          <div className="font-medium truncate max-w-[200px]" title={item.title}>
             {item.title}
           </div>
         </div>
@@ -111,10 +110,7 @@ export default function NotificationsManagement() {
       header: "Nội dung",
       width: "280px",
       render: (item) => (
-        <div
-          className="text-xs text-muted-foreground truncate max-w-[280px]"
-          title={item.content}
-        >
+        <div className="text-xs text-muted-foreground truncate max-w-[280px]" title={item.content}>
           {item.content}
         </div>
       ),
@@ -128,9 +124,7 @@ export default function NotificationsManagement() {
         const config = typeConfig[item.type];
         const Icon = config.icon;
         return (
-          <Badge
-            className={`${config.color} text-white flex items-center gap-1 w-fit`}
-          >
+          <Badge className={`${config.color} text-white flex items-center gap-1 w-fit`}>
             <Icon className="h-3 w-3" />
             {config.label}
           </Badge>
@@ -151,9 +145,7 @@ export default function NotificationsManagement() {
       width: "150px",
       sortable: true,
       render: (item) => (
-        <Badge
-          className={`${statusConfig[item.status].color} text-white text-xs`}
-        >
+        <Badge className={`${statusConfig[item.status].color} text-white text-xs`}>
           {statusConfig[item.status].label}
         </Badge>
       ),
@@ -190,9 +182,7 @@ export default function NotificationsManagement() {
                   <Eye className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Xem chi tiết</p>
-              </TooltipContent>
+              <TooltipContent><p>Xem chi tiết</p></TooltipContent>
             </TooltipUI>
           </TooltipProvider>
 
@@ -212,9 +202,7 @@ export default function NotificationsManagement() {
                   <Edit className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Chỉnh sửa</p>
-              </TooltipContent>
+              <TooltipContent><p>Chỉnh sửa</p></TooltipContent>
             </TooltipUI>
           </TooltipProvider>
 
@@ -228,7 +216,7 @@ export default function NotificationsManagement() {
                   onClick={async () => {
                     try {
                       await notificationService.deleteNotification(item.id);
-                      setNotifications(notifications.filter((n) => n.id !== item.id));
+                      await refreshNotificationList();
                       toast.success("Đã xóa thông báo thành công!");
                     } catch {
                       toast.error("Xóa thông báo thất bại");
@@ -238,9 +226,7 @@ export default function NotificationsManagement() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Xóa</p>
-              </TooltipContent>
+              <TooltipContent><p>Xóa</p></TooltipContent>
             </TooltipUI>
           </TooltipProvider>
         </div>
@@ -254,9 +240,7 @@ export default function NotificationsManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl mb-2">Chi tiết thông báo</h2>
-            <p className="text-muted-foreground">
-              Xem thông tin chi tiết thông báo
-            </p>
+            <p className="text-muted-foreground">Xem thông tin chi tiết thông báo</p>
           </div>
           <Button variant="outline" onClick={() => setViewMode("list")}>
             Quay lại
@@ -282,9 +266,7 @@ export default function NotificationsManagement() {
               <div>
                 <Label className="text-muted-foreground">Loại</Label>
                 <div className="mt-1">
-                  <Badge
-                    className={`${typeConfig[selectedNotification.type].color} text-white`}
-                  >
+                  <Badge className={`${typeConfig[selectedNotification.type].color} text-white`}>
                     {typeConfig[selectedNotification.type].label}
                   </Badge>
                 </div>
@@ -296,28 +278,18 @@ export default function NotificationsManagement() {
               <div>
                 <Label className="text-muted-foreground">Trạng thái</Label>
                 <div className="mt-1">
-                  <Badge
-                    className={`${statusConfig[selectedNotification.status].color} text-white`}
-                  >
+                  <Badge className={`${statusConfig[selectedNotification.status].color} text-white`}>
                     {statusConfig[selectedNotification.status].label}
                   </Badge>
                 </div>
               </div>
               <div>
                 <Label className="text-muted-foreground">Ngày tạo</Label>
-                <p>
-                  {new Date(selectedNotification.created_at).toLocaleString(
-                    "vi-VN"
-                  )}
-                </p>
+                <p>{new Date(selectedNotification.created_at).toLocaleString("vi-VN")}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Ngày cập nhật</Label>
-                <p>
-                  {new Date(selectedNotification.updated_at).toLocaleString(
-                    "vi-VN"
-                  )}
-                </p>
+                <p>{new Date(selectedNotification.updated_at).toLocaleString("vi-VN")}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Người tạo</Label>
@@ -326,9 +298,7 @@ export default function NotificationsManagement() {
               <div>
                 <Label className="text-muted-foreground">Hoạt động</Label>
                 <div className="mt-1">
-                  <Badge
-                    className={selectedNotification.active ? "bg-green-500" : "bg-gray-500"}
-                  >
+                  <Badge className={selectedNotification.active ? "bg-green-500" : "bg-gray-500"}>
                     {selectedNotification.active ? "Hoạt động" : "Không hoạt động"}
                   </Badge>
                 </div>
@@ -342,9 +312,7 @@ export default function NotificationsManagement() {
             </div>
             <div>
               <Label className="text-muted-foreground">Nội dung</Label>
-              <p className="mt-2 p-4 bg-muted rounded-lg">
-                {selectedNotification.content}
-              </p>
+              <p className="mt-2 p-4 bg-muted rounded-lg">{selectedNotification.content}</p>
             </div>
           </CardContent>
         </Card>
@@ -361,9 +329,7 @@ export default function NotificationsManagement() {
               {viewMode === "add" ? "Tạo thông báo mới" : "Chỉnh sửa thông báo"}
             </h2>
             <p className="text-muted-foreground">
-              {viewMode === "add"
-                ? "Nhập thông tin thông báo"
-                : "Cập nhật thông tin thông báo"}
+              {viewMode === "add" ? "Nhập thông tin thông báo" : "Cập nhật thông tin thông báo"}
             </p>
           </div>
           <Button variant="outline" onClick={() => setViewMode("list")}>
@@ -378,9 +344,7 @@ export default function NotificationsManagement() {
                 <Label>Tiêu đề *</Label>
                 <Input
                   value={formData.title || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Nhập tiêu đề thông báo"
                 />
               </div>
@@ -388,9 +352,7 @@ export default function NotificationsManagement() {
                 <Label>Nội dung *</Label>
                 <Textarea
                   value={formData.content || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, content: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="Nhập nội dung thông báo"
                   rows={5}
                 />
@@ -399,9 +361,7 @@ export default function NotificationsManagement() {
                 <Label>Loại thông báo</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: any) =>
-                    setFormData({ ...formData, type: value })
-                  }
+                  onValueChange={(value: any) => setFormData({ ...formData, type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -418,9 +378,7 @@ export default function NotificationsManagement() {
                 <Label>Đối tượng nhận</Label>
                 <Select
                   value={formData.target}
-                  onValueChange={(value: any) =>
-                    setFormData({ ...formData, target: value })
-                  }
+                  onValueChange={(value: any) => setFormData({ ...formData, target: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -437,9 +395,7 @@ export default function NotificationsManagement() {
                   <Label>CCCD người nhận</Label>
                   <Input
                     value={formData.target_user || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, target_user: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, target_user: e.target.value })}
                     placeholder="Nhập CCCD"
                   />
                 </div>
@@ -490,11 +446,10 @@ export default function NotificationsManagement() {
         itemsPerPage={itemsPerPage}
         totalItems={totalCount}
         totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        onItemsPerPageChange={setItemsPerPage}
+        onPageChange={setNotificationPage}
+        onItemsPerPageChange={setNotificationItemsPerPage}
       />
 
-      {/* Action Legend */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

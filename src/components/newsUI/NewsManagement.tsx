@@ -14,7 +14,6 @@ import {
   Edit,
   Trash2,
   Plus,
-  TrendingUp,
   FileText,
   Users,
   Newspaper,
@@ -30,7 +29,8 @@ import { toast } from "sonner";
 import NewsDetailPage from "./NewsDetailPage";
 import NewsAddEdit from "./NewsAddEdit";
 import { newsService } from "@/services/newsService";
-import { News, PaginatedNewsResponse } from "@/types/news.types";
+import { News } from "@/types/news.types";
+import { useDataLists } from "@/context/DataListContext";
 
 const categoryConfig: Record<string, { label: string; color: string }> = {
   law: { label: "Luật giao thông", color: "bg-orange-500" },
@@ -80,27 +80,26 @@ function StatCard({ title, value, subtitle, icon: Icon, color }: StatCardProps) 
 export default function NewsManagement() {
   const [viewMode, setViewMode] = useState<"list" | "detail" | "add" | "edit">("list");
   const [selectedNews, setSelectedNews] = useState<News | null>(null);
-  const [newsList, setNewsList] = useState<News[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-
-  const fetchNews = async () => {
-    try {
-      const res = await newsService.getAllNews(currentPage, itemsPerPage);
-      setNewsList(res.news);
-      setTotalCount(res.total_count);
-      setTotalPages(res.total_pages);
-    } catch (error) {
-      toast.error("Không thể tải danh sách tin tức");
-    }
-  };
+  const {
+    newsList: newsListState,
+    setNewsPage,
+    setNewsItemsPerPage,
+    ensureNewsList,
+    refreshNewsList,
+  } = useDataLists();
+  const {
+    items: newsList,
+    totalCount,
+    totalPages,
+    currentPage,
+    itemsPerPage,
+  } = newsListState;
 
   useEffect(() => {
-
-    fetchNews();
-  }, []);
+    if (viewMode === "list") {
+      void ensureNewsList();
+    }
+  }, [viewMode, currentPage, itemsPerPage]);
 
   const handleViewDetail = (news: News) => {
     setSelectedNews(news);
@@ -120,15 +119,15 @@ export default function NewsManagement() {
   const handleBack = () => {
     setSelectedNews(null);
     setViewMode("list");
-    fetchNews();
+    void ensureNewsList();
   };
 
   const handleDelete = async (news: News) => {
     try {
       await newsService.deleteNews(news.id);
       toast.success("Đã xóa tin tức thành công!");
-      fetchNews();
-    } catch (err) {
+      await refreshNewsList();
+    } catch {
       toast.error("Xóa thất bại");
     }
   };
@@ -138,7 +137,7 @@ export default function NewsManagement() {
   }
 
   if (viewMode === "add" || viewMode === "edit") {
-    return <NewsAddEdit news={selectedNews} onBack={handleBack} mode={viewMode} onSuccess={() => fetchNews()} />;
+    return <NewsAddEdit news={selectedNews} onBack={handleBack} mode={viewMode} onSuccess={() => void refreshNewsList()} />;
   }
 
   const columns: ColumnDef<News>[] = [
@@ -276,8 +275,8 @@ export default function NewsManagement() {
           itemsPerPage={itemsPerPage}
           totalItems={totalCount}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          onItemsPerPageChange={setItemsPerPage}
+          onPageChange={setNewsPage}
+          onItemsPerPageChange={setNewsItemsPerPage}
         />
       </motion.div>
     </div>

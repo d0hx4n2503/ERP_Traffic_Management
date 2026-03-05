@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -12,11 +12,9 @@ import {
   MapPin,
   CheckCircle,
   XCircle,
-  TrendingUp,
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,12 +26,12 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import AuthorityDetailPage from "@/components/GovAgencyUI/AuthorityDetailPage";
 import AuthorityAddEdit from "@/components/GovAgencyUI/AuthorityAddEdit";
-import { ColumnDef, FilterConfig } from "@/components/ModernDataTable";
-import ModernDataTable from "@/components/LicensesUI/ModernDataTable"
+import ModernDataTable, { ColumnDef, FilterConfig } from "@/components/LicensesUI/ModernDataTable";
 import StatCard from "@/components/StatCard";
 import { toast } from "sonner";
 import { agencyService } from "@/services/agencyService";
-import type { GovAgency, PaginatedAgenciesResponse } from "@/types/agency.types";
+import type { GovAgency } from "@/types/agency.types";
+import { useDataLists } from "@/context/DataListContext";
 
 const authorityTypeLabels: Record<string, string> = {
   police_department: "Phòng CSGT",
@@ -50,63 +48,58 @@ const typeColors: Record<string, string> = {
 };
 
 export default function TrafficAuthoritiesManagement() {
-  const [agencies, setAgencies] = useState<GovAgency[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const {
+    agencyList,
+    setAgencyPage,
+    setAgencyItemsPerPage,
+    ensureAgencyList,
+    refreshAgencyList,
+  } = useDataLists();
   const [selectedAuthority, setSelectedAuthority] = useState<GovAgency | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "detail" | "add" | "edit">("list");
+  const {
+    items: agencyItems,
+    loading,
+    error,
+    currentPage,
+    itemsPerPage,
+    totalCount: serverTotalCount,
+    totalPages,
+  } = agencyList;
 
-  // Phân trang & lọc
   const [filters, setFilters] = useState<Record<string, string>>({
     type: "all",
     city: "all",
     status: "all",
   });
 
-  // Fetch dữ liệu
-  const fetchAgencies = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Gọi API phân trang
-      const response: PaginatedAgenciesResponse = await agencyService.getAllAgencies(currentPage, itemsPerPage);
-      let filtered = response.gov_agency;
-
-      // Lọc client-side (vì backend chưa hỗ trợ filter)
-      if (filters.type !== "all") {
-        filtered = filtered.filter((a: any) => a.type === filters.type);
-      }
-      if (filters.city !== "all") {
-        filtered = filtered.filter((a: any) => a.city === filters.city);
-      }
-      if (filters.status !== "all") {
-        filtered = filtered.filter((a: any) => a.status === filters.status);
-      }
-
-      setAgencies(filtered);
-      setTotalCount(response.total_count);
-      setTotalPages(response.total_pages);
-
-    } catch (err: any) {
-      setError(err.message || "Không thể tải danh sách cơ quan");
-      toast.error("Lỗi tải dữ liệu cơ quan");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, itemsPerPage, filters]);
-
   useEffect(() => {
     if (viewMode === "list") {
-      fetchAgencies();
+      void ensureAgencyList();
     }
-  }, [viewMode, currentPage, filters, fetchAgencies]);
+  }, [viewMode, currentPage, itemsPerPage]);
 
-  // Danh sách thành phố và loại hình từ dữ liệu thực
+  const agencies = useMemo(() => {
+    let filtered = agencyItems;
+    if (filters.type !== "all") {
+      filtered = filtered.filter((a) => a.type === filters.type);
+    }
+    if (filters.city !== "all") {
+      filtered = filtered.filter((a) => a.city === filters.city);
+    }
+    if (filters.status !== "all") {
+      filtered = filtered.filter((a) => a.status === filters.status);
+    }
+    return filtered;
+  }, [agencyItems, filters]);
+
+  const totalCount = useMemo(() => {
+    if (filters.type === "all" && filters.city === "all" && filters.status === "all") {
+      return serverTotalCount;
+    }
+    return agencies.length;
+  }, [filters, serverTotalCount, agencies.length]);
+
   const cities = useMemo(() => {
     const unique = Array.from(new Set(agencies.map((a) => a.city))).sort();
     return unique;
@@ -117,13 +110,11 @@ export default function TrafficAuthoritiesManagement() {
     return unique;
   }, [agencies]);
 
-  // Stats tính từ dữ liệu thực
   const stats = useMemo(() => {
     const total = agencies.length;
     const active = agencies.filter((a) => a.status === "active" && a.active).length;
     const inactive = total - active;
-    const totalEmployees = agencies.reduce((sum, a) => sum + (a as any).employees || 0, 0); // nếu có trường employees
-
+    const totalEmployees = agencies.reduce((sum, a) => sum + ((a as any).employees || 0), 0);
     return { total, active, inactive, totalEmployees };
   }, [agencies]);
 
@@ -146,8 +137,8 @@ export default function TrafficAuthoritiesManagement() {
     try {
       await agencyService.deleteAgencies(authority.id);
       toast.success("Xóa cơ quan thành công!");
-      fetchAgencies();
-    } catch (err) {
+      await refreshAgencyList();
+    } catch {
       toast.error("Xóa cơ quan thất bại");
     }
   };
@@ -156,20 +147,19 @@ export default function TrafficAuthoritiesManagement() {
     try {
       if (viewMode === "add") {
         await agencyService.createAgencies(data);
-        toast.success("Them co quan thanh cong!");
+        toast.success("Thêm cơ quan thành công!");
       } else if (selectedAuthority) {
         await agencyService.updateAgencies(selectedAuthority.id, data);
-        toast.success("Cap nhat co quan thanh cong!");
+        toast.success("Cập nhật cơ quan thành công!");
       }
       setViewMode("list");
       setSelectedAuthority(null);
-      fetchAgencies();
-    } catch (err) {
-      toast.error("Luu thay doi that bai");
+      await refreshAgencyList();
+    } catch {
+      toast.error("Lưu thay đổi thất bại");
     }
   };
 
-  // Các cột bảng
   const columns: ColumnDef<GovAgency>[] = [
     {
       key: "stt",
@@ -357,14 +347,13 @@ export default function TrafficAuthoritiesManagement() {
     },
   ];
 
-  // Các chế độ xem chi tiết/thêm/sửa
   if (viewMode === "detail" && selectedAuthority) {
     return (
       <AuthorityDetailPage
         authority={selectedAuthority}
         onAgencyUpdated={(updated) => {
           setSelectedAuthority(updated);
-          setAgencies((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+          void refreshAgencyList();
         }}
         onBack={() => {
           setViewMode("list");
@@ -396,7 +385,6 @@ export default function TrafficAuthoritiesManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
       <div className="grid gap-6 md:grid-cols-4">
         <StatCard
           title="Tổng cơ quan"
@@ -434,7 +422,6 @@ export default function TrafficAuthoritiesManagement() {
         />
       </div>
 
-      {/* Error & Loading */}
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -442,7 +429,6 @@ export default function TrafficAuthoritiesManagement() {
         </Alert>
       )}
 
-      {/* Data Table */}
       <div>
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -462,8 +448,8 @@ export default function TrafficAuthoritiesManagement() {
             itemsPerPage={itemsPerPage}
             totalItems={totalCount}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            onItemsPerPageChange={setItemsPerPage}
+            onPageChange={setAgencyPage}
+            onItemsPerPageChange={setAgencyItemsPerPage}
             actions={
               <Button onClick={handleAdd}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -473,7 +459,6 @@ export default function TrafficAuthoritiesManagement() {
           />
         )}
 
-        {/* Action Legend */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -500,4 +485,3 @@ export default function TrafficAuthoritiesManagement() {
     </div>
   );
 }
-

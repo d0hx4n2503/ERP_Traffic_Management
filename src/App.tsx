@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { PermissionsProvider } from './context/PermissionsContext';
+import { DataListProvider } from './context/DataListContext';
 import { BreadcrumbProvider, useBreadcrumb } from './components/BreadcrumbContext';
 import { usePermissions } from './context/PermissionsContext';
 import LoginPage from './components/LoginPage';
@@ -201,10 +202,12 @@ export default function App() {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <PermissionsProvider>
-          <BreadcrumbProvider>
-            <AppContent />
-            <Toaster position="top-right" richColors />
-          </BreadcrumbProvider>
+          <DataListProvider>
+            <BreadcrumbProvider>
+              <AppContent />
+              <Toaster position="top-right" richColors />
+            </BreadcrumbProvider>
+          </DataListProvider>
         </PermissionsProvider>
       </QueryClientProvider>
     </WagmiProvider>

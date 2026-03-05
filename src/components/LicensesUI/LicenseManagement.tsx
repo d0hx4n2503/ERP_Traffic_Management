@@ -17,20 +17,30 @@ import { statusConfig } from '@/constants/status.constant';
 import { FilterConfig } from '@/constants/notification.constant';
 import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
 import { toast } from 'sonner';
+import { useDataLists } from '@/context/DataListContext';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export default function LicenseManagement() {
-  const [licenses, setLicenses] = useState<DriverLicense[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState<DriverLicense | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'add' | 'edit'>('list');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const {
+    licenseList,
+    setLicensePage,
+    setLicenseItemsPerPage,
+    ensureLicenseList,
+    refreshLicenseList,
+  } = useDataLists();
+  const {
+    items: licenses,
+    totalCount,
+    totalPages,
+    currentPage,
+    itemsPerPage,
+    loading,
+    error,
+  } = licenseList;
 
   const {
     statusStats,
@@ -40,25 +50,11 @@ export default function LicenseManagement() {
     loading: statsLoading,
     error: statsError
   } = useLicenseStats();
-
   useEffect(() => {
-    const fetchLicenses = async () => {
-      try {
-        setLoading(true);
-        const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
-        setLicenses(licenseData.driver_licenses);
-        setTotalCount(licenseData.total_count);
-        setTotalPages(licenseData.total_pages);
-      } catch (err) {
-        setError('Lỗi khi tải dữ liệu giấy phép lái xe');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLicenses();
-  }, [currentPage, itemsPerPage]);
+    if (viewMode === 'list') {
+      void ensureLicenseList();
+    }
+  }, [viewMode, currentPage, itemsPerPage]);
 
   const handleViewDetail = (license: DriverLicense) => {
     setSelectedLicense(license);
@@ -73,10 +69,7 @@ export default function LicenseManagement() {
   const handleDeleteLicense = async (id: string) => {
     try {
       await licenseService.deleteLicense(id);
-      const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
-      setLicenses(licenseData.driver_licenses);
-      setTotalCount(licenseData.total_count);
-      setTotalPages(licenseData.total_pages);
+      await refreshLicenseList();
       toast.success('Đã xóa GPLX thành công!');
     } catch (err) {
       console.error('Lỗi khi xóa:', err);
@@ -87,10 +80,7 @@ export default function LicenseManagement() {
   const handleAddLicense = async (data: Partial<DriverLicense>) => {
     try {
       await licenseService.createLicense(data);
-      const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
-      setLicenses(licenseData.driver_licenses);
-      setTotalCount(licenseData.total_count);
-      setTotalPages(licenseData.total_pages);
+      await refreshLicenseList();
       setViewMode('list');
     } catch (err) {
       console.error('Lỗi khi thêm:', err);
@@ -100,10 +90,7 @@ export default function LicenseManagement() {
   const handleUpdateLicense = async (id: string, data: Partial<DriverLicense>) => {
     try {
       await licenseService.updateLicense(id, data);
-      const licenseData = await licenseService.getAllLicenses(currentPage, itemsPerPage);
-      setLicenses(licenseData.driver_licenses);
-      setTotalCount(licenseData.total_count);
-      setTotalPages(licenseData.total_pages);
+      await refreshLicenseList();
       setViewMode('detail');
     } catch (err) {
       console.error('Lỗi khi cập nhật:', err);
@@ -595,8 +582,8 @@ export default function LicenseManagement() {
           itemsPerPage={itemsPerPage}
           totalItems={totalCount}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          onItemsPerPageChange={setItemsPerPage}
+          onPageChange={setLicensePage}
+          onItemsPerPageChange={setLicenseItemsPerPage}
         />
 
         <motion.div
@@ -625,3 +612,6 @@ export default function LicenseManagement() {
     </div>
   );
 }
+
+
+

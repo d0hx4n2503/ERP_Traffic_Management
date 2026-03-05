@@ -30,9 +30,10 @@ import ModernDataTable, { ColumnDef, FilterConfig } from '@/components/LicensesU
 import StatCard from '../StatCard';
 import { toast } from 'sonner';
 import vehicleService from '@/services/vehicleService';
-import type { VehicleRegistration, VehicleRegistrationList, CountItem } from '@/types';
+import type { VehicleRegistration, CountItem } from '@/types';
 import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
 import { statusConfig } from '@/constants/status.constant';
+import { useDataLists } from '@/context/DataListContext';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -40,33 +41,26 @@ export default function VehicleManagement() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleRegistration | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'add' | 'edit'>('list');
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [vehicles, setVehicles] = useState<VehicleRegistration[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const {
+    vehicleList,
+    setVehiclePage,
+    setVehicleItemsPerPage,
+    ensureVehicleList,
+    refreshVehicleList,
+  } = useDataLists();
+  const {
+    items: vehicles,
+    totalCount,
+    totalPages,
+    currentPage,
+    itemsPerPage,
+    loading,
+  } = vehicleList;
 
   const [statsType, setStatsType] = useState<CountItem[]>([]);
   const [statsBrand, setStatsBrand] = useState<CountItem[]>([]);
   const [statsStatus, setStatsStatus] = useState<CountItem[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
-
-  // Fetch danh sách xe
-  const fetchVehicles = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await vehicleService.getAllVehicles(currentPage, itemsPerPage);
-      setVehicles(response.vehicle_registration);
-      setTotalCount(response.total_count)
-      setTotalPages(response.total_pages);
-    } catch (err) {
-      toast.error('Không thể tải danh sách phương tiện');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, itemsPerPage]);
 
   // Fetch thống kê
   const fetchStats = useCallback(async () => {
@@ -85,16 +79,18 @@ export default function VehicleManagement() {
   }, []);
 
   useEffect(() => {
-    fetchVehicles();
+    if (viewMode === 'list') {
+      void ensureVehicleList();
+    }
     fetchStats();
-  }, [fetchVehicles, fetchStats]);
+  }, [viewMode, currentPage, itemsPerPage, fetchStats]);
 
   // Xử lý xóa
   const handleDelete = async (vehicle: VehicleRegistration) => {
     try {
       await vehicleService.deleteVehicleRegistration(vehicle.id);
       toast.success('Xóa phương tiện thành công!');
-      fetchVehicles();
+      await refreshVehicleList();
     } catch (err) {
       toast.error('Xóa thất bại');
     }
@@ -158,7 +154,7 @@ export default function VehicleManagement() {
             await vehicleService.updateVehicleRegistration(selectedVehicle.id, data);
           }
           toast.success(viewMode === 'add' ? 'Thêm phương tiện thành công!' : 'Cập nhật thành công!');
-          await fetchVehicles();
+          await refreshVehicleList();
           await fetchStats();
           setViewMode('list');
           setSelectedVehicle(null);
@@ -550,8 +546,8 @@ export default function VehicleManagement() {
             itemsPerPage={itemsPerPage}
             totalItems={totalCount}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            onItemsPerPageChange={setItemsPerPage}
+            onPageChange={setVehiclePage}
+            onItemsPerPageChange={setVehicleItemsPerPage}
           />
         )}
 
@@ -573,3 +569,5 @@ export default function VehicleManagement() {
     </div>
   );
 }
+
+
