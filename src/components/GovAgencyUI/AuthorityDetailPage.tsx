@@ -18,7 +18,8 @@ import {
   Printer,
   Shield,
   Wallet,
-  Blocks
+  Blocks,
+  Wallet2
 } from 'lucide-react';
 import { GovAgency } from '@/types/agency.types';
 import { useBreadcrumb } from '@/components/BreadcrumbContext';
@@ -196,6 +197,16 @@ export default function AuthorityDetailPage({
                 value={
                   <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
                     {authority.id}
+                  </code>
+                }
+              />
+              <Separator />
+              <InfoRow
+                icon={Wallet2}
+                label="Địa chỉ ví"
+                value={
+                  <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
+                    {authority.user_address || 'Chưa có địa chỉ ví'}
                   </code>
                 }
               />

@@ -185,7 +185,7 @@ export default function TrafficAuthoritiesManagement() {
       sortable: true,
       width: "140px",
       render: (auth) => (
-        <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 font-mono">
+        <Badge variant="" className="bg-gray-50 text-gray-700 border-gray-200 font-mono">
           {auth.user_address.slice(0, 8)}...
         </Badge>
       ),
@@ -219,7 +219,7 @@ export default function TrafficAuthoritiesManagement() {
       key: "city",
       header: "Thành phố",
       sortable: true,
-      width: "120px",
+      width: "140px",
       render: (auth) => (
         <span className="text-sm truncate" title={auth.city}>
           {auth.city}
