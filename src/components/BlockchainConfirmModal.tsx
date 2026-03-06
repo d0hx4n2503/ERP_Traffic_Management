@@ -60,9 +60,7 @@ export default function BlockchainConfirmModal({
       onClose();
       setTxHash('');
     } catch (error: any) {
-      toast.error('Lỗi khi lưu trữ vào Blockchain', {
-        description: error?.message || 'Vui lòng thử lại sau',
-      });
+      toast.error('Lỗi khi lưu trữ vào Blockchain');
     } finally {
       setIsProcessing(false);
     }
@@ -71,7 +69,7 @@ export default function BlockchainConfirmModal({
   return (
     <Dialog
       open={open}
-      onOpenChange={(nextOpen) => {
+      onOpenChange={(nextOpen: any) => {
         if (!nextOpen) {
           onClose();
           setTxHash('');

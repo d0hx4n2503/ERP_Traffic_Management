@@ -382,7 +382,7 @@ export default function BlockchainDataManagement() {
                                 <thead className="bg-gradient-to-r from-cyan-50 to-blue-50 border-b border-cyan-200">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Chủ xe</th>
-                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">CCCD</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">ID Chủ sở hữu/ CCCD</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Biển số</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Loại xe</th>
                                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Số khung</th>
@@ -401,7 +401,7 @@ export default function BlockchainDataManagement() {
                                         vehicleRegistrations.map((row, idx) => (
                                             <motion.tr key={`${row.vehiclePlateNo}-${idx}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="hover:bg-cyan-50/50 transition-colors">
                                                 <td className="px-4 py-3 text-sm">
-                                                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{formatAddress(row.addressUser)}</code>
+                                                    <code className="text-xs bg-gray-100 px-2 py-1 rounded">{row.addressUser}</code>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm">{row.identityNo}</td>
                                                 <td className="px-4 py-3 text-sm font-medium">{row.vehiclePlateNo}</td>

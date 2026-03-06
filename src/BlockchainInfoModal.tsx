@@ -44,6 +44,14 @@ type BlockchainData = {
     point: bigint;
 };
 
+const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+};
+
+const formatID = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
+};
+
 const normalizeColorPlate = (colorPlate?: string): number => {
     const value = (colorPlate || '').trim().toLowerCase();
     if (value.includes('xanh')) return 2;
@@ -160,6 +168,8 @@ export default function BlockchainInfoModal({ open, onClose, mode, license, vehi
                     authorityId: onChain.chassisNo,
                     point: BigInt(onChain.colorPlate),
                 });
+
+                console.log("status: ", data?.status)
             }
 
             toast.success('Đã tải dữ liệu từ blockchain');
@@ -212,6 +222,13 @@ export default function BlockchainInfoModal({ open, onClose, mode, license, vehi
                     <Badge className="bg-red-100 text-red-700 border-red-300">
                         <XCircle className="w-3 h-3 mr-1" />
                         Thu hồi
+                    </Badge>
+                );
+            case 3:
+                return (
+                    <Badge className="bg-green-100 text-green-700 border-green-300">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Hoạt động
                     </Badge>
                 );
             default:
@@ -328,7 +345,7 @@ export default function BlockchainInfoModal({ open, onClose, mode, license, vehi
 
     return (
         <Dialog open={open} onOpenChange={(nextOpen: any) => !nextOpen && onClose()}>
-            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader className="flex-shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg">
@@ -411,7 +428,7 @@ export default function BlockchainInfoModal({ open, onClose, mode, license, vehi
 
                                     <DataRow
                                         label="Địa chỉ Blockchain"
-                                        value={data.holderAddress}
+                                        value={formatAddress(data.holderAddress)}
                                         copyable
                                         mismatch={
                                             mode === 'license'
@@ -452,51 +469,58 @@ export default function BlockchainInfoModal({ open, onClose, mode, license, vehi
                                                 : !!vehicle && Number(data.point) !== normalizeColorPlate(vehicle.color_plate)
                                         }
                                     />
+                                    {mode === 'license' && (
+                                        <>
+                                            <DataRow
+                                                label="Ngày cấp"
+                                                value={formatDate(data.issueDate)}
+                                                mismatch={
+                                                    mode === 'license' && !!license
+                                                        ? formatDate(data.issueDate) !==
+                                                        new Date(license.issue_date).toLocaleDateString('vi-VN', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                        })
+                                                        : false
+                                                }
+                                            />
 
-                                    <DataRow
-                                        label="Ngày cấp"
-                                        value={formatDate(data.issueDate)}
-                                        mismatch={
-                                            mode === 'license' && !!license
-                                                ? formatDate(data.issueDate) !==
-                                                new Date(license.issue_date).toLocaleDateString('vi-VN', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: 'numeric',
-                                                })
-                                                : false
-                                        }
-                                    />
-
-                                    <DataRow
-                                        label="Ngày hết hạn"
-                                        value={formatDate(data.expiryDate)}
-                                        mismatch={
-                                            mode === 'license' && !!license
-                                                ? formatDate(data.expiryDate) !==
-                                                (license.expiry_date
-                                                    ? new Date(license.expiry_date).toLocaleDateString('vi-VN', {
-                                                        day: '2-digit',
-                                                        month: '2-digit',
-                                                        year: 'numeric',
-                                                    })
-                                                    : 'N/A')
-                                                : false
-                                        }
-                                    />
+                                            <DataRow
+                                                label="Ngày hết hạn"
+                                                value={formatDate(data.expiryDate)}
+                                                mismatch={
+                                                    mode === 'license' && !!license
+                                                        ? formatDate(data.expiryDate) !==
+                                                        (license.expiry_date
+                                                            ? new Date(license.expiry_date).toLocaleDateString('vi-VN', {
+                                                                day: '2-digit',
+                                                                month: '2-digit',
+                                                                year: 'numeric',
+                                                            })
+                                                            : 'N/A')
+                                                        : false
+                                                }
+                                            />
+                                        </>
+                                    )}
 
                                     <DataRow label="Trạng thái" value={getStatusBadge(data.status)} />
 
-                                    <DataRow label={mode === 'license' ? 'Mã cơ quan cấp' : 'Số khung'} value={data.authorityId} />
+                                    <DataRow label={mode === 'license' ? 'Mã cơ quan cấp' : 'Số khung'} value={formatID(data.authorityId)} />
 
-                                    <DataRow
-                                        label={mode === 'license' ? 'Điểm vi phạm' : 'Mã màu biển'}
-                                        value={
-                                            <Badge variant={Number(data.point) > 0 ? 'destructive' : 'outline'} className="text-xs">
-                                                {data.point.toString()} {mode === 'license' ? 'điểm' : ''}
-                                            </Badge>
-                                        }
-                                    />
+                                    {mode === 'license' && (
+                                        <>
+                                            <DataRow
+                                                label={mode === 'license' ? 'Điểm vi phạm' : 'Mã màu biển'}
+                                                value={
+                                                    <Badge variant={Number(data.point) > 0 ? 'destructive' : 'outline'} className="text-xs">
+                                                        {data.point.toString()} {mode === 'license' ? 'điểm' : ''}
+                                                    </Badge>
+                                                }
+                                            />
+                                        </>
+                                    )}
                                 </div>
                             </Card>
                         </div>
@@ -519,7 +543,7 @@ export default function BlockchainInfoModal({ open, onClose, mode, license, vehi
                                 size="sm"
                                 onClick={handleUpdateBlockchain}
                                 disabled={dataMatches || updating}
-                                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                                className="hover:from-purple-700 hover:to-blue-700"
                             >
                                 {updating ? (
                                     <>
