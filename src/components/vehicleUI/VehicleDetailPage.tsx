@@ -29,6 +29,7 @@ import { statusConfig } from '@/constants/status.constant';
 import { VEHICLE_TYPE_LABEL, VehicleType } from '@/constants/vehicle.constant';
 import { VEHICLE_BRAND_LABEL, VehicleBrand } from '@/constants/brand.constant';
 import { issueVehicleRegistrationOnChain } from '@/contracts/vehicleRegistrationService';
+import BlockchainInfoModal from '@/BlockchainInfoModal';
 
 interface VehicleDetailPageProps {
   vehicle: VehicleRegistration;
@@ -39,6 +40,7 @@ interface VehicleDetailPageProps {
 export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDetailPageProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
   const [isBlockchainModalOpen, setBlockchainModalOpen] = useState(false);
+  const [showBlockchainInfoModal, setShowBlockchainInfoModal] = useState(false);
   const [currentVehicle, setCurrentVehicle] = useState<VehicleRegistration>(vehicle);
 
   useEffect(() => {
@@ -244,6 +246,10 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
                 <FileText className="mr-2 h-4 w-4" />
                 Xem giấy đăng kiểm
               </Button>
+              <Button className="w-full justify-start" variant="outline" onClick={() => setShowBlockchainInfoModal(true)}>
+                <Shield className="mr-2 h-4 w-4" />
+                Kiểm tra thông tin trên chuỗi cho blockchain
+              </Button>
               {daysUntilExpiry !== null && daysUntilExpiry < 0 && (
                 <Button className="w-full justify-start" variant="outline">
                   <AlertTriangle className="mr-2 h-4 w-4" />
@@ -333,6 +339,12 @@ export default function VehicleDetailPage({ vehicle, onBack, onEdit }: VehicleDe
           number: currentVehicle.vehicle_no,
           name: currentVehicle.owner_name,
         }}
+      />
+      <BlockchainInfoModal
+        open={showBlockchainInfoModal}
+        onClose={() => setShowBlockchainInfoModal(false)}
+        mode="vehicle"
+        vehicle={currentVehicle}
       />
     </div>
   );

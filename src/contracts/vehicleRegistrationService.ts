@@ -28,12 +28,48 @@ const normalizeColorPlate = (colorPlate: string | undefined): number => {
   return 0; // WHITE
 };
 
+const normalizePlateNo = (plate: string | undefined): string =>
+  (plate || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
 const resolveVehicleOwnerAddress = (vehicle: VehicleRegistration): string => {
   const ownerAddress = vehicle.user_address;
   if (!ownerAddress || !ethers.isAddress(ownerAddress)) {
     throw new Error('Khong tim thay dia chi vi chu xe hop le tu backend (user_address).');
   }
   return ownerAddress;
+};
+
+export interface VehicleRegistrationOnChainRecord {
+  addressUser: string;
+  identityNo: string;
+  vehicleModel: string;
+  chassisNo: string;
+  vehiclePlateNo: string;
+  colorPlate: number;
+  status: number;
+}
+
+const getReadContract = () => {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    throw new Error('Khong tim thay vi Web3. Vui long cai MetaMask hoac vi tuong thich.');
+  }
+  if (!ethers.isAddress(VEHICLE_REGISTRATION_CONTRACT_ADDRESS)) {
+    throw new Error('Dia chi VehicleRegistration contract khong hop le.');
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  return new ethers.Contract(
+    VEHICLE_REGISTRATION_CONTRACT_ADDRESS,
+    resolveVehicleRegistrationAbi(),
+    provider
+  );
+};
+
+const isNotFoundRevert = (error: unknown): boolean => {
+  const payload = JSON.stringify(error ?? '');
+  return payload.includes('0xc5723b51') || payload.toLowerCase().includes('notfound');
 };
 
 export const issueVehicleRegistrationOnChain = async (vehicle: VehicleRegistration): Promise<string> => {
@@ -72,6 +108,79 @@ export const issueVehicleRegistrationOnChain = async (vehicle: VehicleRegistrati
   return tx.hash as string;
 };
 
+export const getVehicleRegistrationOnChain = async (
+  vehiclePlateNo: string,
+  ownerAddress: string
+): Promise<VehicleRegistrationOnChainRecord> => {
+  if (!vehiclePlateNo?.trim()) {
+    throw new Error('Bien so xe khong hop le de truy van blockchain.');
+  }
+  if (!ownerAddress || !ethers.isAddress(ownerAddress)) {
+    throw new Error('Dia chi vi chu xe khong hop le de truy van blockchain.');
+  }
+
+  let vehicles: any[] = [];
+  try {
+    const contract = getReadContract();
+    console.log('Truy van blockchain voi dia chi vi:', ownerAddress);
+    vehicles = await contract.getVehicleByAddressUser(ownerAddress);
+  } catch (error) {
+    if (isNotFoundRevert(error)) {
+      throw new Error('Chua co du lieu phuong tien tren blockchain cho dia chi vi nay.');
+    }
+    throw error;
+  }
+  const matched = (vehicles || []).find(
+    (item: any) => normalizePlateNo(String(item.vehiclePlateNo || '')) === normalizePlateNo(vehiclePlateNo)
+  );
+  if (!matched) {
+    throw new Error('Khong tim thay du lieu phuong tien tren blockchain theo vi da lien ket.');
+  }
+
+  return {
+    addressUser: matched.addressUser,
+    identityNo: matched.identityNo,
+    vehicleModel: matched.vehicleModel,
+    chassisNo: matched.chassisNo,
+    vehiclePlateNo: matched.vehiclePlateNo,
+    colorPlate: Number(matched.colorPlate),
+    status: Number(matched.status),
+  };
+};
+
+export const updateVehicleRegistrationOnChain = async (vehicle: VehicleRegistration): Promise<string> => {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    throw new Error('Khong tim thay vi Web3. Vui long cai MetaMask hoac vi tuong thich.');
+  }
+  if (!ethers.isAddress(VEHICLE_REGISTRATION_CONTRACT_ADDRESS)) {
+    throw new Error('Dia chi VehicleRegistration contract khong hop le.');
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send('eth_requestAccounts', []);
+  const signer = await provider.getSigner();
+
+  const contract = new ethers.Contract(
+    VEHICLE_REGISTRATION_CONTRACT_ADDRESS,
+    resolveVehicleRegistrationAbi(),
+    signer
+  );
+
+  const tx = await contract.updateVehicleRegistration(vehicle.vehicle_no, {
+    addressUser: resolveVehicleOwnerAddress(vehicle),
+    identityNo: vehicle.owner_id || vehicle.id,
+    colorPlate: normalizeColorPlate(vehicle.color_plate),
+  });
+
+  const receipt = await tx.wait();
+  if (!receipt || receipt.status !== 1) {
+    throw new Error('Giao dich blockchain that bai.');
+  }
+  return tx.hash as string;
+};
+
 export default {
   issueVehicleRegistrationOnChain,
+  getVehicleRegistrationOnChain,
+  updateVehicleRegistrationOnChain,
 };

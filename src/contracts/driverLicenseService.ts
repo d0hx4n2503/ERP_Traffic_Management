@@ -76,6 +76,20 @@ export interface DriverLicenseUserOnChainInfo {
   expiryDate?: number;
 }
 
+export interface DriverLicenseOnChainRecord {
+  tokenId: bigint;
+  licenseNo: string;
+  holderAddress: string;
+  holderId: string;
+  name: string;
+  licenseType: string;
+  issueDate: bigint;
+  expiryDate: bigint;
+  status: number;
+  authorityId: string;
+  point: number;
+}
+
 export const getDriverLicenseUserInfoOnChain = async (
   licenseNo: string,
   holderAddress: string
@@ -116,6 +130,114 @@ export const getDriverLicenseUserInfoOnChain = async (
   } catch {
     return baseInfo;
   }
+};
+
+const isNotFoundRevert = (error: unknown): boolean => {
+  const payload = JSON.stringify(error ?? '');
+  return payload.includes('0xc5723b51') || payload.toLowerCase().includes('notfound');
+};
+
+export const getDriverLicenseOnChain = async (
+  licenseNo: string,
+  holderAddress?: string
+): Promise<DriverLicenseOnChainRecord> => {
+  if (!licenseNo?.trim()) {
+    throw new Error('So GPLX khong hop le de truy van blockchain.');
+  }
+
+  try {
+    const contract = getReadContract();
+    const onChainLicense = await contract.getLicense(licenseNo);
+    return {
+      tokenId: BigInt(onChainLicense.tokenId),
+      licenseNo: onChainLicense.licenseNo,
+      holderAddress: onChainLicense.holderAddress,
+      holderId: onChainLicense.holderId,
+      name: onChainLicense.name,
+      licenseType: onChainLicense.licenseType,
+      issueDate: BigInt(onChainLicense.issueDate),
+      expiryDate: BigInt(onChainLicense.expiryDate),
+      status: Number(onChainLicense.status),
+      authorityId: onChainLicense.authorityId,
+      point: Number(onChainLicense.point),
+    };
+  } catch (error) {
+    if (isNotFoundRevert(error)) {
+      if (holderAddress && ethers.isAddress(holderAddress)) {
+        try {
+          const contract = getReadContract();
+          const holderLicenses = await contract.getLicensesByHolder(holderAddress);
+          const matched = (holderLicenses || []).find(
+            (item: any) => String(item.licenseNo || '').toLowerCase() === licenseNo.toLowerCase()
+          );
+          if (matched) {
+            return {
+              tokenId: BigInt(matched.tokenId),
+              licenseNo: matched.licenseNo,
+              holderAddress: matched.holderAddress,
+              holderId: matched.holderId,
+              name: matched.name,
+              licenseType: matched.licenseType,
+              issueDate: BigInt(matched.issueDate),
+              expiryDate: BigInt(matched.expiryDate),
+              status: Number(matched.status),
+              authorityId: matched.authorityId,
+              point: Number(matched.point),
+            };
+          }
+        } catch {
+          // Fallback below.
+        }
+      }
+      throw new Error('Chua co du lieu GPLX tren blockchain cho ban ghi nay.');
+    }
+    throw error;
+  }
+};
+
+export const updateDriverLicenseOnChain = async (license: DriverLicense): Promise<string> => {
+  if (typeof window === 'undefined' || !window.ethereum) {
+    throw new Error('Khong tim thay vi Web3. Vui long cai MetaMask hoac vi tuong thich.');
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send('eth_requestAccounts', []);
+  const signer = await provider.getSigner();
+
+  if (!ethers.isAddress(DRIVER_LICENSE_CONTRACT_ADDRESS)) {
+    throw new Error('Dia chi DriverLicense contract khong hop le.');
+  }
+
+  const contract = new ethers.Contract(
+    DRIVER_LICENSE_CONTRACT_ADDRESS,
+    resolveDriverLicenseAbi(),
+    signer
+  );
+
+  const now = Math.floor(Date.now() / 1000);
+  const issueDate = toUnixTimestamp(license.issue_date, now);
+  const defaultExpiry = issueDate + PERMANENT_LICENSE_YEARS * 365 * 24 * 60 * 60;
+  let expiryDate = toUnixTimestamp(license.expiry_date, defaultExpiry);
+  if (expiryDate <= issueDate) {
+    expiryDate = issueDate + 24 * 60 * 60;
+  }
+
+  const tx = await contract.updateLicense(license.license_no, {
+    holderId: license.identity_no,
+    holderAddress: resolveHolderAddress(license),
+    name: license.full_name,
+    licenseType: license.license_type,
+    expiryDate,
+    status: 0,
+    point: normalizePoint(license.point),
+  });
+
+  const receipt = await tx.wait();
+  if (!receipt || receipt.status !== 1) {
+    throw new Error('Giao dich blockchain that bai.');
+  }
+
+  return tx.hash as string;
 };
 
 export const issueDriverLicenseOnChain = async (license: DriverLicense): Promise<string> => {
@@ -168,5 +290,7 @@ export const issueDriverLicenseOnChain = async (license: DriverLicense): Promise
 export default {
   issueDriverLicenseOnChain,
   getDriverLicenseUserInfoOnChain,
+  getDriverLicenseOnChain,
+  updateDriverLicenseOnChain,
 };
 

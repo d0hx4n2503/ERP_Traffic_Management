@@ -27,12 +27,8 @@ import licenseService from '@/services/licenseService';
 import type { DriverLicense } from '@/types';
 import { statusConfig } from '@/constants/status.constant';
 import { Province, PROVINCE_LABEL } from '@/constants/city.constant';
-import {
-  getDriverLicenseUserInfoOnChain,
-  issueDriverLicenseOnChain,
-  type DriverLicenseUserOnChainInfo,
-} from '@/contracts/driverLicenseService';
-import OnChainUserInfoModal from './OnChainUserInfoModal';
+import { issueDriverLicenseOnChain } from '@/contracts/driverLicenseService';
+import BlockchainInfoModal from '@/BlockchainInfoModal';
 
 interface LicenseDetailPageProps {
   license: DriverLicense;
@@ -43,10 +39,8 @@ interface LicenseDetailPageProps {
 export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDetailPageProps) {
   const { setBreadcrumbs, resetBreadcrumbs } = useBreadcrumb();
   const [showBlockchainModal, setShowBlockchainModal] = useState(false);
-  const [showOnChainModal, setShowOnChainModal] = useState(false);
   const [currentLicense, setCurrentLicense] = useState<DriverLicense>(license);
-  const [isCheckingOnChain, setIsCheckingOnChain] = useState(false);
-  const [onChainUserInfo, setOnChainUserInfo] = useState<DriverLicenseUserOnChainInfo | null>(null);
+  const [showBlockchainInfoModal, setShowBlockchainInfoModal] = useState(false);
 
   useEffect(() => {
     setCurrentLicense(license);
@@ -83,31 +77,6 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
     const updatedLicense = await licenseService.confirmBlockchainStorage(currentLicense.id, txHash);
     setCurrentLicense(updatedLicense);
     toast.success('Đã ký giao dịch và cập nhật dữ liệu blockchain');
-  };
-
-  const handleCheckUserOnChain = async () => {
-    const holderAddress = currentLicense.wallet_address || currentLicense.owner_address;
-    if (!holderAddress) {
-      toast.error('Không tìm thấy địa chỉ ví của người dùng để kiểm tra');
-      return;
-    }
-
-    setIsCheckingOnChain(true);
-    try {
-      const info = await getDriverLicenseUserInfoOnChain(currentLicense.license_no, holderAddress);
-      setOnChainUserInfo(info);
-      toast.success('Đã kiểm tra thông tin on-chain thành công');
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Không thể kiểm tra thông tin on-chain';
-      toast.error(message);
-    } finally {
-      setIsCheckingOnChain(false);
-    }
-  };
-
-  const handleOpenOnChainModal = async () => {
-    setShowOnChainModal(true);
-    await handleCheckUserOnChain();
   };
 
   return (
@@ -191,7 +160,7 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <Separator />
               <InfoRow
                 icon={WalletCards}
-                label="Số GPLX"
+                label="Địa chỉ ví liên kết"
                 value={currentLicense.wallet_address ? (
                   <span className="font-mono text-sm">
                     {currentLicense.wallet_address}
@@ -332,11 +301,10 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
               <Button
                 className="w-full justify-start"
                 variant="outline"
-                onClick={handleOpenOnChainModal}
-                disabled={isCheckingOnChain}
+                onClick={() => setShowBlockchainInfoModal(true)}
               >
                 <Shield className="mr-2 h-4 w-4" />
-                {isCheckingOnChain ? 'Đang kiểm tra on-chain...' : 'Kiểm tra thông tin on-chain'}
+                Kiểm tra thông tin trên chuỗi cho blockchain
               </Button>
               <Button className="w-full justify-start" variant="outline">
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -443,12 +411,11 @@ export default function LicenseDetailPage({ license, onBack, onEdit }: LicenseDe
         }}
       />
 
-      <OnChainUserInfoModal
-        open={showOnChainModal}
-        onClose={() => setShowOnChainModal(false)}
-        onRefresh={handleCheckUserOnChain}
-        loading={isCheckingOnChain}
-        info={onChainUserInfo}
+      <BlockchainInfoModal
+        open={showBlockchainInfoModal}
+        onClose={() => setShowBlockchainInfoModal(false)}
+        mode="license"
+        license={currentLicense}
       />
     </div>
   );
