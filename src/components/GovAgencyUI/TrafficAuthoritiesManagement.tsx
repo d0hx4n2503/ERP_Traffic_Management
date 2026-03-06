@@ -26,12 +26,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import AuthorityDetailPage from "@/components/GovAgencyUI/AuthorityDetailPage";
 import AuthorityAddEdit from "@/components/GovAgencyUI/AuthorityAddEdit";
-import ModernDataTable, { ColumnDef, FilterConfig } from "@/components/LicensesUI/ModernDataTable";
+import ModernDataTable, { ColumnDef } from "@/components/LicensesUI/ModernDataTable";
 import StatCard from "@/components/StatCard";
 import { toast } from "sonner";
 import { agencyService } from "@/services/agencyService";
 import type { GovAgency } from "@/types/agency.types";
 import { useDataLists } from "@/context/DataListContext";
+import { FilterConfig } from "@/constants/notification.constant";
 
 const authorityTypeLabels: Record<string, string> = {
   police_department: "Phòng CSGT",
@@ -171,10 +172,21 @@ export default function TrafficAuthoritiesManagement() {
       key: "id",
       header: "Mã cơ quan",
       sortable: true,
-      width: "130px",
+      width: "140px",
       render: (auth) => (
         <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 font-mono">
           {auth.id.slice(0, 8)}...
+        </Badge>
+      ),
+    },
+    {
+      key: "user_address",
+      header: "Địa chỉ ví",
+      sortable: true,
+      width: "140px",
+      render: (auth) => (
+        <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 font-mono">
+          {auth.user_address.slice(0, 8)}...
         </Badge>
       ),
     },
